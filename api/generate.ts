@@ -68,7 +68,8 @@ Provide your response in JSON format matching this schema:
   "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji (e.g., 🎥 for YouTube video, 📢 for industry report, 💬 for Telegram post)",
   "date": "The date of the report or current date if not found (YYYY-MM-DD format)",
   "category": "One of 'youtube', 'telegram', or 'report'",
-  "sourceUrl": "The URL of the source if mentioned, or empty string",
+  "sourceUrl": "The primary URL of the source if mentioned, or empty string",
+  "sourceUrls": ["List of all source URLs/links mentioned or provided in the text, if multiple exist"],
   "summary": "An elegant 2-3 sentence overview summarizing the core event or findings",
   "keyPoints": [
     "Key Takeaway 1",
@@ -132,6 +133,10 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
             date: { type: Type.STRING },
             category: { type: Type.STRING },
             sourceUrl: { type: Type.STRING },
+            sourceUrls: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
             summary: { type: Type.STRING },
             keyPoints: {
               type: Type.ARRAY,

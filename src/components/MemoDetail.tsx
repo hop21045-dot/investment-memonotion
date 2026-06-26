@@ -116,7 +116,16 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
     let md = `# ${report.title}\n\n`;
     md += `* **날짜:** ${report.date}\n`;
     md += `* **구분:** ${report.category.toUpperCase()}\n`;
-    if (report.sourceUrl) md += `* **출처:** [링크](${report.sourceUrl})\n`;
+    if (report.sourceUrls && report.sourceUrls.length > 0) {
+      md += `* **출처 목록:**\n`;
+      report.sourceUrls.forEach((url, uidx) => {
+        if (url.trim()) {
+          md += `  - [출처 ${uidx + 1}](${url.trim()})\n`;
+        }
+      });
+    } else if (report.sourceUrl) {
+      md += `* **출처:** [링크](${report.sourceUrl})\n`;
+    }
     md += `\n## 📌 요약\n${report.summary}\n\n`;
     
     md += `## 🔑 핵심 정리\n`;
@@ -356,20 +365,38 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
               </div>
             </div>
 
-            {report.sourceUrl && (
+            {((report.sourceUrls && report.sourceUrls.filter(u => u.trim()).length > 0) || report.sourceUrl) && (
               <div className="flex items-start gap-4 col-span-1 md:col-span-2">
                 <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 flex-shrink-0 pt-0.5">
                   🔗 출처 링크
                 </span>
-                <a
-                  href={report.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-black font-semibold hover:opacity-80 transition-all truncate hover:underline text-[13px] flex items-center gap-1"
-                >
-                  <span>{report.sourceUrl}</span>
-                  <ExternalLink className="w-3 h-3 inline" />
-                </a>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  {report.sourceUrls && report.sourceUrls.filter(u => u.trim()).length > 0 ? (
+                    report.sourceUrls.filter(u => u.trim()).map((url, idx) => (
+                      <a
+                        key={idx}
+                        href={url.startsWith('http') ? url : `https://${url}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-black font-semibold hover:opacity-80 transition-all truncate hover:underline text-[13px] inline-flex items-center gap-1 w-fit"
+                      >
+                        <span className="bg-gray-100 text-[10px] text-gray-600 px-1.5 py-0.5 rounded font-mono">출처 {idx + 1}</span>
+                        <span className="truncate max-w-[200px] sm:max-w-md">{url}</span>
+                        <ExternalLink className="w-3 h-3 inline" />
+                      </a>
+                    ))
+                  ) : (
+                    <a
+                      href={report.sourceUrl!.startsWith('http') ? report.sourceUrl! : `https://${report.sourceUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-black font-semibold hover:opacity-80 transition-all truncate hover:underline text-[13px] inline-flex items-center gap-1 w-fit"
+                    >
+                      <span className="truncate max-w-[200px] sm:max-w-md">{report.sourceUrl}</span>
+                      <ExternalLink className="w-3 h-3 inline" />
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 

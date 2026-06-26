@@ -41,6 +41,7 @@ export interface StructuredReport {
   date: string;
   category: 'youtube' | 'telegram' | 'report' | 'webpage';
   sourceUrl?: string;
+  sourceUrls?: string[];
   summary: string;
   keyPoints: string[];
   sections: Section[];

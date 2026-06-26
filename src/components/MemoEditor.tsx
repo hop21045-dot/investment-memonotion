@@ -246,6 +246,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [sectors, setSectors] = useState<string[]>([]);
   const [newSector, setNewSector] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceUrls, setSourceUrls] = useState<string[]>([""]);
   const [summary, setSummary] = useState("");
   const [importance, setImportance] = useState<number>(3); // Default to 3
   const [verified, setVerified] = useState<"O" | "X">("X");
@@ -268,6 +269,11 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setCategory(report.category);
       setSectors(report.sectors || []);
       setSourceUrl(report.sourceUrl || "");
+      if (report.sourceUrls && Array.isArray(report.sourceUrls)) {
+        setSourceUrls(report.sourceUrls.length > 0 ? [...report.sourceUrls] : [""]);
+      } else {
+        setSourceUrls(report.sourceUrl ? [report.sourceUrl] : [""]);
+      }
       setSummary(report.summary);
       setImportance(report.importance || 3);
       setVerified(report.verified || "X");
@@ -288,6 +294,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setCategory("webpage");
       setSectors(["AI", "반도체"]);
       setSourceUrl("");
+      setSourceUrls([""]);
       setSummary("");
       setImportance(3);
       setVerified("X");
@@ -357,7 +364,13 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sectors && Array.isArray(data.sectors)) {
         setSectors(data.sectors.map((s: any) => String(s)));
       }
-      if (data.sourceUrl !== undefined) setSourceUrl(data.sourceUrl);
+      if (data.sourceUrls && Array.isArray(data.sourceUrls)) {
+        setSourceUrls(data.sourceUrls.map((u: any) => String(u)));
+        setSourceUrl(data.sourceUrls[0] || "");
+      } else if (data.sourceUrl !== undefined) {
+        setSourceUrl(data.sourceUrl);
+        setSourceUrls(data.sourceUrl ? [data.sourceUrl] : [""]);
+      }
       if (data.summary) setSummary(data.summary);
       if (data.importance !== undefined) setImportance(Number(data.importance));
       const isVerified = data.verified !== undefined ? data.verified : data.verification;
@@ -471,7 +484,13 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sectors && Array.isArray(data.sectors)) {
         setSectors(data.sectors.map((s: any) => String(s)));
       }
-      if (data.sourceUrl !== undefined) setSourceUrl(data.sourceUrl);
+      if (data.sourceUrls && Array.isArray(data.sourceUrls)) {
+        setSourceUrls(data.sourceUrls.map((u: any) => String(u)));
+        setSourceUrl(data.sourceUrls[0] || "");
+      } else if (data.sourceUrl !== undefined) {
+        setSourceUrl(data.sourceUrl);
+        setSourceUrls(data.sourceUrl ? [data.sourceUrl] : [""]);
+      }
       if (data.summary) setSummary(data.summary);
       if (data.importance !== undefined) setImportance(Number(data.importance));
       const isVerified = data.verified !== undefined ? data.verified : data.verification;
@@ -557,12 +576,14 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       return;
     }
 
+    const nonEvUrls = sourceUrls.filter(u => u.trim() !== "");
     const savedReport: StructuredReport = {
       id: report?.id || `memo-${Date.now()}`,
       title,
       date,
       category,
-      sourceUrl,
+      sourceUrl: nonEvUrls[0] || "",
+      sourceUrls: nonEvUrls,
       summary,
       importance,
       verified,
@@ -1058,16 +1079,52 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               </select>
             </div>
 
-            {/* Source URL */}
-            <div className="col-span-1 md:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-gray-500">출처 링크 (Source URL)</label>
-              <input
-                type="text"
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="https://example.com/source-url"
-                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-              />
+            {/* Source URLs (Multi-input) */}
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
+                  🔗 출처 링크 목록 (Source URLs)
+                  <span className="text-[10px] text-gray-400 font-normal">(여러 컨텐츠의 원본 출처를 각각 추가할 수 있습니다)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSourceUrls([...sourceUrls, ""])}
+                  className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 font-bold" />
+                  <span>출처 추가</span>
+                </button>
+              </div>
+              <div className="space-y-2">
+                {sourceUrls.map((url, uidx) => (
+                  <div key={uidx} className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-gray-400 bg-gray-50 border border-gray-150 rounded px-2 py-1.5 w-14 text-center select-none shrink-0 font-bold">
+                      출처 {uidx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => {
+                        const nextUrls = [...sourceUrls];
+                        nextUrls[uidx] = e.target.value;
+                        setSourceUrls(nextUrls);
+                      }}
+                      placeholder="https://example.com/source-url-here"
+                      className="flex-1 text-xs p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-sans"
+                    />
+                    {sourceUrls.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setSourceUrls(sourceUrls.filter((_, i) => i !== uidx))}
+                        className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-lg border border-gray-200/50 hover:border-rose-200 transition-all shrink-0 cursor-pointer"
+                        title="이 출처 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Sectors / Tags */}
