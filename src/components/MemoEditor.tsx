@@ -1,0 +1,1549 @@
+import React, { useState, useEffect } from "react";
+import { StructuredReport, Section, MentionedAsset } from "../types";
+import {
+  Sparkles,
+  Save,
+  X,
+  Plus,
+  Trash2,
+  Video,
+  MessageSquare,
+  FileText,
+  AlertCircle,
+  HelpCircle,
+  Globe,
+  Copy,
+  Check,
+  ExternalLink,
+  FileCode
+} from "lucide-react";
+
+const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이지 글 등 다양한 원문 콘텐츠를 분석하여 최고의 '노션 스타일 구조화 메모'를 만들어 주는 투자 및 자료 리포팅 전문가입니다.
+
+입력된 원문을 심도 있게 분석하여 다음 JSON 스키마를 만족하는 정확한 JSON 코드를 생성해 주세요. 부연 설명이나 다른 말은 일절 하지 말고, 오직 마크다운 코드 블록(\`\`\`json ... \`\`\`) 안에 담긴 JSON 결과물만 반환하세요.
+
+[JSON 스키마 규격]
+{
+  "title": "노션 스타일의 직관적이고 눈길을 끄는 메모 제목 (예: '[테크] TV 디스플레이 시장 전망 및 기술 트렌드')",
+  "category": "webpage", // 'youtube', 'telegram', 'report', 'webpage' 중 원문에 가장 알맞은 카테고리 기입
+  "sectors": ["AI", "반도체"], // 관련 있는 주요 투자 섹터/업종 태그들 기입 (예: 'AI', '반도체', '이차전지', '바이오', '매크로' 등 자유롭게 지정)
+  "sourceUrl": "https://example.com/source (알 수 있는 경우 출처 URL, 모르면 빈 문자열)",
+  "summary": "핵심 내용을 요약한 2~3줄 분량의 깔끔한 개요. **중요한 투자 포인트와 산업적 의미**가 드러나도록 작성합니다. (Markdown 볼드체나 서식을 적절히 가미하여 노션처럼 깔끔하게 작성)",
+  "keyPoints": [
+    "핵심 요약 내용 첫 번째 줄",
+    "핵심 요약 내용 두 번째 줄",
+    "핵심 요약 내용 세 번째 줄 (필요에 따라 더 늘리거나 3줄 정도로 제한)"
+  ],
+  "sections": [
+    {
+      "title": "01 | [핵심 주제 1] 가독성을 높인 대제목",
+      "content": "이 섹션의 상세 분석 내용. 줄바꿈과 마크다운 서식을 사용하여 구조화하여 작성하되, 마크다운 표는 절대 직접 작성하지 않습니다.",
+      "quote": {
+        "text": "본문에서 가장 핵심이 되는 중요한 인용구 또는 인상 깊은 강조 문장 (선택사항, 없으면 빈 문자열)",
+        "author": "말한 사람 또는 기관 (선택사항, 없으면 빈 문자열)"
+      },
+      "table": {
+        "headers": ["구분", "내용 1", "내용 2"],
+        "rows": [
+          ["행 1 열 1", "행 1 열 2", "행 1 열 3"],
+          ["행 2 열 1", "행 2 열 2", "행 2 열 3"]
+        ]
+      },
+      "callout": {
+        "type": "warning", // 'warning', 'info', 'idea' 중 내용에 어울리는 타입 선택
+        "text": "노션 스타일의 콜아웃 박스에 들어갈 중요 체크포인트 및 알림 내용"
+      }
+    }
+  ],
+  "investmentView": {
+    "mentionedAssets": [
+      {
+        "asset": "예시 자산 또는 관련 종목/기업명 (예: 삼성전자 (005930))",
+        "relation": "수혜주 / 핵심 공급사 / 경쟁사 등 관계 서술",
+        "context": "어떤 연관성이나 호재가 있는지 구체적인 문맥 설명"
+      }
+    ],
+    "bullArguments": [
+      "긍정적 요인 (호재, 성장성 등. 구체적인 논리와 근거 필수 포함)"
+    ],
+    "caveats": [
+      "주의해야 할 리스크 및 우려 요인 (구체적인 우려 논리와 수치/배경 근거 필수 포함)"
+    ],
+    "neutralEvaluation": "전체 내용을 냉철하게 종합한 최종 중립적 평가 및 향후 전망 예측"
+  },
+  "verification": "X", // 검증 여부 (기본값 'X')
+  "importance": 3, // 중요도 점수 (1~5 정수)
+  "status": "요약완료", // 상태값 (예: '요약완료', '정독필요', '검증중', '검증완료', 'Wiki반영')
+  "action": "" // 조치 사항 (공란 또는 'Wiki 반영 후보' 등 자유 서술)
+}
+
+★ [구조화 방식 취사선택 가이드]:
+1. 줄글(content) vs 표(table)의 영리한 선택:
+   - 배경 맥락, 인과 관계, 정성적인 분석이나 스토리라인은 줄바꿈과 볼드체(**) 등 마크다운 서식을 활용해 'content' 필드에 깔끔한 가독성을 갖춘 줄글로 표현하세요.
+   - 숫자 데이터, 재무 지표(매출, 영업이익, PER, PBR), 경쟁사 스펙 비교, 체크리스트, 또는 여러 행과 열로 정형화할 수 있는 수치/비교 정보는 반드시 'table' 필드에 완벽히 분리하여 입력하세요.
+   - 만약 해당 섹션에 테이블로 정형화할 만한 데이터가 없다면, table 객체의 headers와 rows를 빈 배열(예: "headers": [], "rows": [])로 비워두어야 합니다. 억지로 무의미한 표를 만들지 마세요.
+
+★ [투자 포인트 및 리스크 분석 구체화 지침 (근거/이유 필수 포함)]:
+1. 'bullArguments'(긍정적 투자 포인트)와 'caveats'(우려되는 리스크 요인)를 작성할 때 단순한 사실의 한 줄 나열(예: 'AI 반도체 수요 급증' 또는 '경쟁 심화 우려')은 금지합니다.
+2. 각 항목마다 **"무엇이, 왜 그러한지, 그리고 그것의 원천적/객관적 근거 및 파급 효과"**가 구체적으로 포함된 밀도 높은 문장으로 기술하십시오.
+   - 예시 (올바른 bullArguments): "HBM3E 차세대 칩 공급 계약 체결: 엔비디아의 차세대 GPU 칩셋에 탑재될 독점 공급 계약을 성공적으로 수주하며 2026년 하반기 실적 가시성이 40% 이상 개선되었고, 이에 따른 확실한 캐시카우 확보 및 기술적 선점 효과가 기대됨."
+   - 예시 (올바른 caveats): "중국 로컬 업체의 저가 물량 공세 리스크: 중국 내 디스플레이 패널 경쟁사들이 보조금을 받아 양산하는 LCD 단가 인하 경쟁을 전방위적으로 벌이고 있어, 단기 마진 스프레드가 최소 15% 이상 훼손될 가능성이 상존함."
+
+★ [초정밀 주의사항 및 금지령]:
+1. 절대 금지: 각 section의 'content' 문자열 안에 마크다운 표(|---|---|)를 직접 텍스트로 그리지 마십시오. 표 형태가 필요한 모든 자료는 반드시 해당 섹션의 'table' 객체(headers, rows) 필드에 할당하여 완벽히 분리하셔야 합니다.
+2. 'content'에는 순수 줄글 설명만 작성하고, 표 데이터는 'table' 필드에 완벽하게 정형화하여 넣어주세요.
+3. 모든 텍스트는 한국어로 전문적이고 신뢰감 있는 톤앤매너를 유지하세요.`;
+
+// Helper to extract table from text content if AI mistakenly embeds it as markdown table in text
+function extractTableFromContent(content: string): { cleanedContent: string; table: { headers: string[]; rows: string[][] } | null } {
+  if (!content) return { cleanedContent: content, table: null };
+
+  const lines = content.split('\n');
+  let bestBlock: { start: number; end: number; lines: string[] } | null = null;
+  let currentBlock: { start: number; end: number; lines: string[] } | null = null;
+
+  const isTableLine = (line: string) => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('|') || (trimmed.includes('|') && trimmed.split('|').length > 2);
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isTableLine(line)) {
+      if (!currentBlock) {
+        currentBlock = { start: i, end: i, lines: [line] };
+      } else {
+        currentBlock.end = i;
+        currentBlock.lines.push(line);
+      }
+    } else {
+      if (currentBlock) {
+        const hasSeparator = currentBlock.lines.some(l => {
+          const clean = l.replace(/[|:\-\s]/g, '');
+          return clean === '' && l.includes('-');
+        });
+        if (hasSeparator && currentBlock.lines.length >= 2) {
+          if (!bestBlock || currentBlock.lines.length > bestBlock.lines.length) {
+            bestBlock = currentBlock;
+          }
+        }
+        currentBlock = null;
+      }
+    }
+  }
+  if (currentBlock) {
+    const hasSeparator = currentBlock.lines.some(l => {
+      const clean = l.replace(/[|:\-\s]/g, '');
+      return clean === '' && l.includes('-');
+    });
+    if (hasSeparator && currentBlock.lines.length >= 2) {
+      if (!bestBlock || currentBlock.lines.length > bestBlock.lines.length) {
+        bestBlock = currentBlock;
+      }
+    }
+  }
+
+  if (!bestBlock) {
+    currentBlock = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith('|') && line.split('|').length > 2) {
+        if (!currentBlock) {
+          currentBlock = { start: i, end: i, lines: [line] };
+        } else {
+          currentBlock.end = i;
+          currentBlock.lines.push(line);
+        }
+      } else {
+        if (currentBlock) {
+          if (currentBlock.lines.length >= 2) {
+            if (!bestBlock || currentBlock.lines.length > bestBlock.lines.length) {
+              bestBlock = currentBlock;
+            }
+          }
+          currentBlock = null;
+        }
+      }
+    }
+    if (currentBlock && currentBlock.lines.length >= 2) {
+      if (!bestBlock || currentBlock.lines.length > bestBlock.lines.length) {
+        bestBlock = currentBlock;
+      }
+    }
+  }
+
+  if (bestBlock) {
+    const rawLines = bestBlock.lines;
+    const parseRow = (l: string) => {
+      let trimmed = l.trim();
+      if (trimmed.startsWith('|')) trimmed = trimmed.substring(1);
+      if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1);
+      return trimmed.split('|').map(cell => cell.trim());
+    };
+
+    const filteredLines = rawLines.filter(l => {
+      const clean = l.replace(/[|:\-\s]/g, '');
+      return clean.length > 0;
+    });
+
+    if (filteredLines.length > 0) {
+      const headers = parseRow(filteredLines[0]);
+      const rows: string[][] = [];
+
+      for (let j = 1; j < filteredLines.length; j++) {
+        const rowData = parseRow(filteredLines[j]);
+        while (rowData.length < headers.length) {
+          rowData.push("");
+        }
+        rows.push(rowData.slice(0, headers.length));
+      }
+
+      const beforeTable = lines.slice(0, bestBlock.start).join('\n');
+      const afterTable = lines.slice(bestBlock.end + 1).join('\n');
+      const cleanedContent = [beforeTable.trim(), afterTable.trim()].filter(Boolean).join('\n\n');
+
+      return {
+        cleanedContent,
+        table: { headers, rows }
+      };
+    }
+  }
+
+  return { cleanedContent: content, table: null };
+}
+
+interface MemoEditorProps {
+  report: StructuredReport | null; // null if creating a new one
+  onSave: (report: StructuredReport) => void;
+  onCancel: () => void;
+}
+
+export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps) {
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const triggerToast = (message: string, type: "success" | "error" | "info") => {
+    setToast({ message, type });
+    const scroller = document.getElementById("editor-scroller");
+    if (scroller) {
+      scroller.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  // AI Helper states
+  const [pasteText, setPasteText] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
+  const [isAiHelperOpen, setIsAiHelperOpen] = useState(true);
+  const [aiMode, setAiMode] = useState<"instant" | "paste">("instant"); // Default to instant!
+  const [rawTextForAi, setRawTextForAi] = useState("");
+  const [isGeneratingInstant, setIsGeneratingInstant] = useState(false);
+  const [instantCategory, setInstantCategory] = useState<'youtube' | 'telegram' | 'report' | 'webpage'>('webpage');
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [category, setCategory] = useState<'youtube' | 'telegram' | 'report' | 'webpage'>('webpage');
+  const [sectors, setSectors] = useState<string[]>([]);
+  const [newSector, setNewSector] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [summary, setSummary] = useState("");
+  const [importance, setImportance] = useState<number>(3); // Default to 3
+  const [verified, setVerified] = useState<"O" | "X">("X");
+  const [status, setStatus] = useState<"요약완료" | "정독필요" | "검증중" | "검증완료" | "Wiki반영">("요약완료");
+  const [action, setAction] = useState<StructuredReport["action"]>("");
+  const [keyPoints, setKeyPoints] = useState<string[]>(["", "", ""]);
+  const [sections, setSections] = useState<Section[]>([]);
+  
+  // Investment view states
+  const [mentionedAssets, setMentionedAssets] = useState<MentionedAsset[]>([]);
+  const [bullArguments, setBullArguments] = useState<string[]>([]);
+  const [caveats, setCaveats] = useState<string[]>([]);
+  const [neutralEvaluation, setNeutralEvaluation] = useState("");
+
+  // Sync form states with report when editing
+  useEffect(() => {
+    if (report) {
+      setTitle(report.title);
+      setDate(report.date);
+      setCategory(report.category);
+      setSectors(report.sectors || []);
+      setSourceUrl(report.sourceUrl || "");
+      setSummary(report.summary);
+      setImportance(report.importance || 3);
+      setVerified(report.verified || "X");
+      setStatus(report.status || "요약완료");
+      setAction(report.action !== undefined ? report.action : "");
+      setKeyPoints(report.keyPoints.length > 0 ? [...report.keyPoints] : ["", "", ""]);
+      setSections(report.sections ? JSON.parse(JSON.stringify(report.sections)) : []);
+      
+      const inv = report.investmentView;
+      setMentionedAssets(inv.mentionedAssets ? JSON.parse(JSON.stringify(inv.mentionedAssets)) : []);
+      setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
+      setCaveats(inv.caveats ? [...inv.caveats] : []);
+      setNeutralEvaluation(inv.neutralEvaluation || "");
+    } else {
+      // Pre-fill clean state for "New Memo"
+      setTitle("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setCategory("webpage");
+      setSectors(["AI", "반도체"]);
+      setSourceUrl("");
+      setSummary("");
+      setImportance(3);
+      setVerified("X");
+      setStatus("요약완료");
+      setAction("");
+      setKeyPoints(["", "", ""]);
+      setSections([
+        {
+          id: "sec-init-1",
+          title: "01 | [주제 입력] 첫 번째 분석 주제",
+          content: "분석 내용을 기록해 주세요.",
+          quote: { text: "", author: "" },
+          table: { headers: ["구분", "내용"], rows: [["예시 데이터 1", "내용 1"]] },
+          callout: { type: "warning", text: "체크해야 할 포인트를 적어주세요." }
+        }
+      ]);
+      setMentionedAssets([{ asset: "예: 삼성전자 (005930)", relation: "수혜 예상", context: "AI 시장 성장에 따른 실적 리레이팅 모멘텀" }]);
+      setBullArguments(["시장 지배력의 점진적 향상", "견조한 레거시 수요"]);
+      setCaveats(["글로벌 금리 고조 리스크"]);
+      setNeutralEvaluation("시장 변동성에 주의하되 성장 섹터에 집중하는 보수적 접근이 필요합니다.");
+    }
+  }, [report]);
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(EXTERNAL_AI_PROMPT);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+      triggerToast("프롬프트 복사에 실패했습니다. 직접 드래그하여 복사해 주세요.", "error");
+    }
+  };
+
+  const handleInstantGenerate = async () => {
+    if (!rawTextForAi.trim()) {
+      triggerToast("분석할 원문(텍스트, 유튜브 스크립트 등)을 먼저 입력해 주세요.", "info");
+      return;
+    }
+
+    setIsGeneratingInstant(true);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: instantCategory,
+          text: rawTextForAi
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "분석 중 오류가 발생했습니다.");
+      }
+
+      const data = await res.json();
+
+      // Automatically fill in the form
+      if (data.title) setTitle(data.title);
+      if (data.category) {
+        const cat = data.category.toLowerCase();
+        if (['youtube', 'telegram', 'report', 'webpage'].includes(cat)) {
+          setCategory(cat as any);
+        }
+      }
+      if (data.sectors && Array.isArray(data.sectors)) {
+        setSectors(data.sectors.map((s: any) => String(s)));
+      }
+      if (data.sourceUrl !== undefined) setSourceUrl(data.sourceUrl);
+      if (data.summary) setSummary(data.summary);
+      if (data.importance !== undefined) setImportance(Number(data.importance));
+      const isVerified = data.verified !== undefined ? data.verified : data.verification;
+      if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
+      if (data.status !== undefined) setStatus(data.status);
+      if (data.action !== undefined) setAction(data.action);
+      
+      if (data.keyPoints && Array.isArray(data.keyPoints)) {
+        const kp = data.keyPoints.map((p: any) => String(p));
+        while (kp.length < 3) kp.push("");
+        setKeyPoints(kp);
+      }
+      
+      if (data.sections && Array.isArray(data.sections)) {
+        const parsedSections = data.sections.map((sec: any, idx: number) => {
+          let sectionContent = sec.content || "";
+          let parsedTable = sec.table ? {
+            headers: Array.isArray(sec.table.headers) ? sec.table.headers : ["구분", "상세 내용"],
+            rows: Array.isArray(sec.table.rows) ? sec.table.rows : [["", ""]]
+          } : null;
+
+          // Extract table from content if present
+          const extraction = extractTableFromContent(sectionContent);
+          if (extraction.table) {
+            sectionContent = extraction.cleanedContent;
+            parsedTable = extraction.table;
+          } else if (!parsedTable) {
+            parsedTable = { headers: ["구분", "상세 내용"], rows: [["", ""]] };
+          }
+
+          return {
+            id: sec.id || `sec-parsed-${idx}-${Date.now()}`,
+            title: sec.title || `섹션 ${idx + 1}`,
+            content: sectionContent,
+            quote: sec.quote ? {
+              text: sec.quote.text || "",
+              author: sec.quote.author || ""
+            } : { text: "", author: "" },
+            callout: sec.callout ? {
+              type: sec.callout.type || "warning",
+              text: sec.callout.text || ""
+            } : { type: "warning", text: "" },
+            table: parsedTable
+          };
+        });
+        setSections(parsedSections);
+      }
+      
+      if (data.investmentView) {
+        const iv = data.investmentView;
+        if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
+          setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
+            asset: asset.asset || asset.name || "",
+            relation: asset.relation || "",
+            context: asset.context || ""
+          })));
+        }
+        if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
+          setBullArguments(iv.bullArguments.map((b: any) => String(b)));
+        }
+        if (iv.caveats && Array.isArray(iv.caveats)) {
+          setCaveats(iv.caveats.map((c: any) => String(c)));
+        }
+        if (iv.neutralEvaluation) {
+          setNeutralEvaluation(iv.neutralEvaluation);
+        }
+      }
+
+      triggerToast("🎉 AI가 원문을 분석하여 노션 스타일 폼을 자동으로 완성했습니다! 아래 입력된 내용을 확인해 보세요.", "success");
+      setRawTextForAi(""); // Clear input on success
+    } catch (err: any) {
+      console.error("Instant Generate Error:", err);
+      triggerToast(`분석 실패: ${err.message}`, "error");
+    } finally {
+      setIsGeneratingInstant(false);
+    }
+  };
+
+  const handleParseAndFill = () => {
+    if (!pasteText.trim()) {
+      triggerToast("AI가 출력한 JSON 텍스트를 먼저 입력창에 붙여넣어 주세요.", "info");
+      return;
+    }
+
+    try {
+      let cleanedText = pasteText.trim();
+      
+      // 1. Extract markdown codeblock if present
+      const jsonMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        cleanedText = jsonMatch[1].trim();
+      }
+      
+      // 2. Find start and end braces of JSON object
+      const firstBrace = cleanedText.indexOf("{");
+      const lastBrace = cleanedText.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+      }
+
+      const data = JSON.parse(cleanedText);
+
+      // 3. Fill in basic states
+      if (data.title) setTitle(data.title);
+      if (data.category) {
+        const cat = data.category.toLowerCase();
+        if (['youtube', 'telegram', 'report', 'webpage'].includes(cat)) {
+          setCategory(cat as any);
+        }
+      }
+      if (data.sectors && Array.isArray(data.sectors)) {
+        setSectors(data.sectors.map((s: any) => String(s)));
+      }
+      if (data.sourceUrl !== undefined) setSourceUrl(data.sourceUrl);
+      if (data.summary) setSummary(data.summary);
+      if (data.importance !== undefined) setImportance(Number(data.importance));
+      const isVerified = data.verified !== undefined ? data.verified : data.verification;
+      if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
+      if (data.status !== undefined) setStatus(data.status);
+      if (data.action !== undefined) setAction(data.action);
+      
+      if (data.keyPoints && Array.isArray(data.keyPoints)) {
+        // Ensure we always have at least 3 elements for the form to look nice
+        const kp = data.keyPoints.map((p: any) => String(p));
+        while (kp.length < 3) kp.push("");
+        setKeyPoints(kp);
+      }
+      
+      // 4. Fill in sections
+      if (data.sections && Array.isArray(data.sections)) {
+        const parsedSections = data.sections.map((sec: any, idx: number) => {
+          let sectionContent = sec.content || "";
+          let parsedTable = sec.table ? {
+            headers: Array.isArray(sec.table.headers) ? sec.table.headers : ["구분", "상세 내용"],
+            rows: Array.isArray(sec.table.rows) ? sec.table.rows : [["", ""]]
+          } : null;
+
+          // Extract table from content if present
+          const extraction = extractTableFromContent(sectionContent);
+          if (extraction.table) {
+            sectionContent = extraction.cleanedContent;
+            parsedTable = extraction.table;
+          } else if (!parsedTable) {
+            parsedTable = { headers: ["구분", "상세 내용"], rows: [["", ""]] };
+          }
+
+          return {
+            id: sec.id || `sec-parsed-${idx}-${Date.now()}`,
+            title: sec.title || `섹션 ${idx + 1}`,
+            content: sectionContent,
+            quote: sec.quote ? {
+              text: sec.quote.text || "",
+              author: sec.quote.author || ""
+            } : { text: "", author: "" },
+            callout: sec.callout ? {
+              type: sec.callout.type || "warning",
+              text: sec.callout.text || ""
+            } : { type: "warning", text: "" },
+            table: parsedTable
+          };
+        });
+        setSections(parsedSections);
+      }
+      
+      // 5. Fill in investment views
+      if (data.investmentView) {
+        const iv = data.investmentView;
+        if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
+          setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
+            asset: asset.asset || asset.name || "",
+            relation: asset.relation || "",
+            context: asset.context || ""
+          })));
+        }
+        if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
+          setBullArguments(iv.bullArguments.map((b: any) => String(b)));
+        }
+        if (iv.caveats && Array.isArray(iv.caveats)) {
+          setCaveats(iv.caveats.map((c: any) => String(c)));
+        }
+        if (iv.neutralEvaluation) {
+          setNeutralEvaluation(iv.neutralEvaluation);
+        }
+      }
+
+      triggerToast("🎉 AI 분석 JSON 데이터가 성공적으로 폼에 자동 입력되었습니다! 아래 폼 필드들을 검토해 보시고 저장해 주세요.", "success");
+      setPasteText("");
+    } catch (err: any) {
+      console.error("JSON parsing error: ", err);
+      triggerToast(`파싱 실패: 올바른 JSON 형식이 아닙니다. (오류: ${err.message})`, "error");
+    }
+  };
+
+  const handleSave = () => {
+    if (!title.trim()) {
+      triggerToast("제목을 입력해 주세요.", "error");
+      return;
+    }
+
+    const savedReport: StructuredReport = {
+      id: report?.id || `memo-${Date.now()}`,
+      title,
+      date,
+      category,
+      sourceUrl,
+      summary,
+      importance,
+      verified,
+      status,
+      action,
+      keyPoints: keyPoints.filter(p => p.trim() !== ""),
+      sections: sections.map((sec, idx) => ({
+        ...sec,
+        id: sec.id || `sec-${idx}-${Date.now()}`
+      })),
+      investmentView: {
+        mentionedAssets: mentionedAssets.filter(a => a.asset.trim() !== ""),
+        bullArguments: bullArguments.filter(b => b.trim() !== ""),
+        caveats: caveats.filter(c => c.trim() !== ""),
+        neutralEvaluation
+      },
+      rawText: report?.rawText,
+      attachedPdfName: report?.attachedPdfName,
+      attachedPdfSize: report?.attachedPdfSize,
+      sectors: sectors.filter(s => s.trim() !== "")
+    };
+
+    onSave(savedReport);
+  };
+
+  // Section Management helpers
+  const addSection = () => {
+    const newSec: Section = {
+      id: `sec-new-${Date.now()}`,
+      title: `${String(sections.length + 1).padStart(2, "0")} | [분석] 새로운 분석 주제`,
+      content: "",
+      quote: { text: "", author: "" },
+      table: { headers: ["구분", "상세 내용"], rows: [["", ""]] },
+      callout: { type: "warning", text: "" }
+    };
+    setSections([...sections, newSec]);
+  };
+
+  const removeSection = (idx: number) => {
+    setSections(sections.filter((_, sIdx) => sIdx !== idx));
+  };
+
+  const updateSectionField = (idx: number, field: keyof Section, value: any) => {
+    const updated = [...sections];
+    updated[idx] = { ...updated[idx], [field]: value };
+    setSections(updated);
+  };
+
+  const updateSectionQuote = (idx: number, qField: "text" | "author", value: string) => {
+    const updated = [...sections];
+    const quote = updated[idx].quote || { text: "", author: "" };
+    updated[idx] = {
+      ...updated[idx],
+      quote: { ...quote, [qField]: value }
+    };
+    setSections(updated);
+  };
+
+  const updateSectionCallout = (idx: number, cField: "type" | "text", value: string) => {
+    const updated = [...sections];
+    const callout = updated[idx].callout || { type: "warning", text: "" };
+    updated[idx] = {
+      ...updated[idx],
+      callout: { ...callout, [cField]: value }
+    };
+    setSections(updated);
+  };
+
+  // Custom Table helpers inside sections
+  const updateSectionTableHeader = (secIdx: number, hIdx: number, value: string) => {
+    const updated = [...sections];
+    const table = updated[secIdx].table || { headers: [], rows: [] };
+    const headers = [...table.headers];
+    headers[hIdx] = value;
+    updated[secIdx] = { ...updated[secIdx], table: { ...table, headers } };
+    setSections(updated);
+  };
+
+  const updateSectionTableCell = (secIdx: number, rIdx: number, cIdx: number, value: string) => {
+    const updated = [...sections];
+    const table = updated[secIdx].table || { headers: [], rows: [] };
+    const rows = table.rows.map((row, rI) => {
+      if (rI !== rIdx) return row;
+      const newRow = [...row];
+      newRow[cIdx] = value;
+      return newRow;
+    });
+    updated[secIdx] = { ...updated[secIdx], table: { ...table, rows } };
+    setSections(updated);
+  };
+
+  const addColumnToSectionTable = (secIdx: number) => {
+    const updated = [...sections];
+    const table = updated[secIdx].table || { headers: ["구분", "비교"], rows: [["", ""]] };
+    const headers = [...table.headers, "새 열"];
+    const rows = table.rows.map(row => [...row, ""]);
+    updated[secIdx] = { ...updated[secIdx], table: { headers, rows } };
+    setSections(updated);
+  };
+
+  const addRowToSectionTable = (secIdx: number) => {
+    const updated = [...sections];
+    const table = updated[secIdx].table || { headers: ["구분"], rows: [[""]] };
+    const newRow = Array(table.headers.length).fill("");
+    updated[secIdx] = { ...updated[secIdx], table: { ...table, rows: [...table.rows, newRow] } };
+    setSections(updated);
+  };
+
+  const removeRowFromSectionTable = (secIdx: number, rIdx: number) => {
+    const updated = [...sections];
+    const table = updated[secIdx].table;
+    if (!table) return;
+    const rows = table.rows.filter((_, idx) => idx !== rIdx);
+    updated[secIdx] = { ...updated[secIdx], table: { ...table, rows } };
+    setSections(updated);
+  };
+
+  // Mentioned Assets dynamic helpers
+  const addMentionedAsset = () => {
+    setMentionedAssets([...mentionedAssets, { asset: "", relation: "", context: "" }]);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white" id="memo-editor-container">
+      {/* Top sticky action bar */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-gray-200 flex items-center justify-between z-10">
+        <h2 className="text-base font-bold text-[#1A1A1A]">
+          {report ? "인사이트 메모 수정" : "새로운 인사이트 메모 작성"}
+        </h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-black font-bold px-4 py-2 rounded-lg text-xs transition-all"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>취소</span>
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>저장하기</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Form Scroller */}
+      <div className="flex-1 overflow-y-auto px-6 py-8 max-w-4xl mx-auto w-full space-y-8" id="editor-scroller">
+        {toast && (
+          <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 animate-fade-in shadow-sm ${
+            toast.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : toast.type === "error"
+              ? "bg-rose-50 border-rose-200 text-rose-800"
+              : "bg-blue-50 border-blue-200 text-blue-850"
+          }`} id="editor-toast">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <span>{toast.type === "success" ? "✨" : toast.type === "error" ? "⚠️" : "💡"}</span>
+              <span>{toast.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="text-gray-400 hover:text-gray-600 font-bold text-sm cursor-pointer w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/5"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        
+        {/* AI SMART PASTE ASSISTANT PANEL */}
+        <div className="bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/70 border border-indigo-100 rounded-2xl p-5 shadow-sm space-y-4" id="ai-smart-paste-assistant">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-indigo-600 rounded-xl text-white">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                  AI 스마트 분석 & 스마트 폼 자동완성
+                  <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded-full">노션 스타일</span>
+                </h4>
+                <p className="text-xs text-gray-500">원문을 앱 안에서 즉시 분석하거나, 외부 AI 분석 결과를 복사/붙여넣기하여 스마트 폼을 자동완성하세요.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAiHelperOpen(!isAiHelperOpen)}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-indigo-50"
+            >
+              {isAiHelperOpen ? "숨기기" : "사용 가이드 열기"}
+            </button>
+          </div>
+
+          {isAiHelperOpen && (
+            <div className="space-y-4 pt-2 border-t border-indigo-100/60" id="ai-assistant-body">
+              {/* Tab Switcher */}
+              <div className="flex items-center gap-2 p-1 bg-gray-100/80 rounded-xl max-w-md">
+                <button
+                  type="button"
+                  onClick={() => setAiMode("instant")}
+                  className={`flex-1 text-center py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    aiMode === "instant"
+                      ? "bg-white text-indigo-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  ⚡ 원클릭 AI 즉시 분석 및 생성 (추천)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiMode("paste")}
+                  className={`flex-1 text-center py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    aiMode === "paste"
+                      ? "bg-white text-indigo-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  📋 외부 AI 결과 붙여넣기
+                </button>
+              </div>
+
+              {aiMode === "instant" ? (
+                /* INSTANT MODE PANEL */
+                <div className="bg-white p-5 rounded-xl border border-gray-100 space-y-4 animate-fade-in" id="ai-instant-panel">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div className="md:col-span-1 space-y-1">
+                      <label className="text-xs font-semibold text-gray-500">원문 구분 (카테고리)</label>
+                      <select
+                        value={instantCategory}
+                        onChange={(e) => setInstantCategory(e.target.value as any)}
+                        className="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="report">📢 산업/기업 리포트 (Report)</option>
+                        <option value="youtube">🎥 유튜브 동영상 자막 (YouTube)</option>
+                        <option value="telegram">💬 텔레그램 뉴스 (Telegram)</option>
+                        <option value="webpage">🌐 일반 웹페이지 뉴스/칼럼 (Webpage)</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        아래 입력창에 분석할 원문 텍스트(기사 전문, 유튜브 자막, 투자 레포트 텍스트 등)를 붙여넣으신 후 <strong>[⚡ AI 즉시 분석 및 자동완성]</strong> 버튼을 클릭하세요.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 flex justify-between">
+                      <span>분석할 원문 텍스트</span>
+                      {rawTextForAi.length > 0 && (
+                        <span className="text-gray-400 font-mono text-[10px]">{rawTextForAi.length.toLocaleString()}자 입력됨</span>
+                      )}
+                    </label>
+                    <textarea
+                      value={rawTextForAi}
+                      onChange={(e) => setRawTextForAi(e.target.value)}
+                      placeholder="여기에 유튜브 자막 스크립트, 텔레그램 뉴스글, 또는 기업 보고서의 전문을 붙여넣으세요..."
+                      className="w-full h-36 text-xs p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-sans"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleInstantGenerate}
+                    disabled={isGeneratingInstant}
+                    className={`w-full flex items-center justify-center gap-1.5 font-bold py-3 px-4 rounded-lg text-xs transition-colors shadow-sm ${
+                      isGeneratingInstant
+                        ? "bg-indigo-400 text-indigo-100 cursor-not-allowed"
+                        : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                    }`}
+                  >
+                    {isGeneratingInstant ? (
+                      <>
+                        <span className="animate-spin text-sm">⌛</span>
+                        <span>AI 분석 및 비교 표 구조화 진행 중... 약 5~10초 소요됩니다.</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>⚡ 원문 입력하고 즉시 AI 투자 리포트 및 비교 표 자동완성</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                /* PASTE MODE PANEL (Step 1 and Step 2) */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in" id="ai-paste-panel">
+                  {/* Step 1: Prompt Copier */}
+                  <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black">1</span>
+                        최적화 프롬프트 복사하기
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyPrompt}
+                        className="flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-lg transition-colors border border-indigo-100"
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-700">복사 완료!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>프롬프트 복사</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      아래 버튼을 눌러 특별 제작된 전용 프롬프트를 복사한 후, ChatGPT나 Gemini에 원문(뉴스 기사, 유튜브 스크립트 등)과 함께 던져주세요.
+                    </p>
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 max-h-36 overflow-y-auto">
+                      <pre className="text-[10px] text-gray-600 font-mono whitespace-pre-wrap select-all">
+                        {EXTERNAL_AI_PROMPT}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Paste Area & Action */}
+                  <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black">2</span>
+                        AI 결과 JSON 코드 붙여넣기
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        AI가 출력해 준 <span className="font-mono bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[11px]">JSON 코드 블록</span>을 아래 창에 그대로 붙여넣어 주세요.
+                      </p>
+                      <textarea
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                        placeholder={`{ "title": "[테크] ...", "summary": "...", "keyPoints": [...], "sections": [...] } 형식의 JSON 코드 전체를 복사해서 붙여넣으세요...`}
+                        className="w-full h-24 text-xs font-mono p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleParseAndFill}
+                      className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition-colors shadow-sm cursor-pointer mt-2"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>⚡ 1초 만에 폼 입력 자동 완성 적용</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* MANUAL FORM START */}
+        <div className="space-y-5" id="form-fields">
+          <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">기본 메모 정보</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Title */}
+            <div className="col-span-1 md:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-gray-500">메모 제목</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="예: 🎥 반도체 업황 전방 산업 리포트 정리"
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
+
+            {/* Date */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500">날짜</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
+
+            {/* Category selection */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500">콘텐츠 구분</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['youtube', 'telegram', 'report', 'webpage'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold border rounded-lg transition-all ${
+                      category === cat
+                        ? "bg-black text-white border-black"
+                        : "bg-white border-gray-200 text-gray-650 hover:bg-gray-50"
+                    }`}
+                  >
+                    {cat === "youtube" ? (
+                      <Video className="w-3.5 h-3.5" />
+                    ) : cat === "telegram" ? (
+                      <MessageSquare className="w-3.5 h-3.5" />
+                    ) : cat === "webpage" ? (
+                      <Globe className="w-3.5 h-3.5" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5" />
+                    )}
+                    <span className="capitalize">{cat === 'youtube' ? 'YouTube' : cat === 'telegram' ? 'Telegram' : cat === 'webpage' ? 'Webpage' : 'Report'}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Verification Status */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500">🛡️ 검증 여부</label>
+              <div className="flex gap-2">
+                {(["O", "X"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setVerified(opt)}
+                    className={`flex-1 py-2 text-xs font-bold border rounded-lg transition-all cursor-pointer ${
+                      verified === opt
+                        ? opt === "O"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-rose-600 text-white border-rose-600"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt === "O" ? "O (검증됨)" : "X (미검증)"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Selection */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500">⚙️ 상태 (Status)</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-white font-medium cursor-pointer"
+              >
+                {["요약완료", "정독필요", "검증중", "검증완료", "Wiki반영"].map((st) => (
+                  <option key={st} value={st}>
+                    {st === "요약완료" ? "📝 요약완료" :
+                     st === "정독필요" ? "🔍 정독필요" :
+                     st === "검증중" ? "⚙️ 검증중" :
+                     st === "검증완료" ? "✅ 검증완료" :
+                     "📚 Wiki반영"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Action Item Selection */}
+            <div className="col-span-1 md:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-gray-500">🎯 액션 (Action)</label>
+              <select
+                value={action}
+                onChange={(e) => setAction(e.target.value as any)}
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-white font-medium cursor-pointer"
+              >
+                {[
+                  "",
+                  "1차 요약 필요",
+                  "원문 정독",
+                  "원문 검증 필요",
+                  "ChatGPT 검증 대기",
+                  "Wiki 반영 후보",
+                  "Wiki 반영 필요",
+                  "트래커 업데이트 필요",
+                  "보류",
+                  "폐기"
+                ].map((act) => (
+                  <option key={act} value={act}>
+                    {act === "" ? "선택 안함 (공란)" :
+                     act === "1차 요약 필요" ? "📌 1차 요약 필요" :
+                     act === "원문 정독" ? "📖 원문 정독" :
+                     act === "원문 검증 필요" ? "🧐 원문 검증 필요" :
+                     act === "ChatGPT 검증 대기" ? "🤖 ChatGPT 검증 대기" :
+                     act === "Wiki 반영 후보" ? "🌟 Wiki 반영 후보" :
+                     act === "Wiki 반영 필요" ? "📢 Wiki 반영 필요" :
+                     act === "트래커 업데이트 필요" ? "📊 트래커 업데이트 필요" :
+                     act === "보류" ? "⏸️ 보류" :
+                     "🗑️ 폐기"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Source URL */}
+            <div className="col-span-1 md:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-gray-500">출처 링크 (Source URL)</label>
+              <input
+                type="text"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://example.com/source-url"
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
+
+            {/* Sectors / Tags */}
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <label className="text-xs font-semibold text-gray-500">투자 섹터 / 태그 (Sectors & Tags)</label>
+              <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 border border-slate-200 rounded-lg min-h-[42px] items-center">
+                {sectors.length === 0 ? (
+                  <span className="text-xs text-slate-400">등록된 섹터 태그가 없습니다. 아래에서 추가하거나 직접 입력해 주세요.</span>
+                ) : (
+                  sectors.map((sec, sIdx) => (
+                    <span key={sIdx} className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
+                      <span>{sec}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSectors(sectors.filter((_, idx) => idx !== sIdx))}
+                        className="hover:bg-indigo-700 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[10px] font-black cursor-pointer leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSector}
+                  onChange={(e) => setNewSector(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (newSector.trim() && !sectors.includes(newSector.trim())) {
+                        setSectors([...sectors, newSector.trim()]);
+                        setNewSector("");
+                      }
+                    }
+                  }}
+                  placeholder="예: 이차전지, 바이오, 엔터 (입력 후 엔터 또는 추가)"
+                  className="flex-1 text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newSector.trim() && !sectors.includes(newSector.trim())) {
+                      setSectors([...sectors, newSector.trim()]);
+                      setNewSector("");
+                    }
+                  }}
+                  className="bg-black hover:bg-gray-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all cursor-pointer"
+                >
+                  추가
+                </button>
+              </div>
+
+              {/* Quick Tags Recommendations */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">추천 투자 섹터 태그:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {["AI", "반도체", "이차전지", "바이오", "매크로", "인터넷", "엔터", "소부장", "우주항공", "자율주행"].map((tag) => {
+                    const isAdded = sectors.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        disabled={isAdded}
+                        onClick={() => setSectors([...sectors, tag])}
+                        className={`text-xs px-2.5 py-1 rounded-md border font-semibold transition-all ${
+                          isAdded
+                            ? "bg-gray-55/40 border-gray-150 text-gray-400 cursor-not-allowed"
+                            : "bg-white border-gray-200 text-gray-650 hover:border-black hover:text-black cursor-pointer"
+                        }`}
+                      >
+                        + {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Importance Rating Selector */}
+            <div className="col-span-1 md:col-span-2 space-y-2 border-t border-gray-100 pt-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">⭐️ 중요도 및 레이팅 등급 (Importance Rating)</label>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setImportance(num)}
+                      className="text-2xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                    >
+                      <span className={num <= importance ? "text-amber-500 font-bold" : "text-gray-200"}>
+                        ★
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full">
+                  {importance}점 / 5점
+                </span>
+              </div>
+              
+              {/* Context Explanation based on selected rating */}
+              <div className="p-3.5 rounded-xl border bg-gray-50/50 border-gray-200 text-xs space-y-2 max-w-2xl">
+                <div className="pb-1.5 border-b border-gray-200 text-[11px] text-gray-500">
+                  <span className="font-bold text-gray-700 block mb-0.5">💡 원문 정독 기준 (아래 조건 충족 시 필수 정독):</span>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 font-medium pl-1">
+                    <div>• 보유종목과 직접 관련 있음</div>
+                    <div>• 내가 작성 중인 리포트에 반영 가능</div>
+                    <div>• 기존 투자 논리를 바꿀 수 있음</div>
+                    <div>• 새로운 산업 프레임을 제공함</div>
+                    <div className="col-span-2">• 숫자, 수주, Capex, 실적 전망이 중요함</div>
+                  </div>
+                </div>
+
+                <p className="font-bold text-slate-800 flex items-center gap-1">
+                  🎯 {
+                    importance === 5 ? "[5점] 투자판단에 직접 영향 (행동: 원문 정독 + 검증)" :
+                    importance === 4 ? "[4점] 섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)" :
+                    importance === 3 ? "[3점] 참고자료 (행동: 요약만 저장)" :
+                    importance === 2 ? "[2점] 흥미는 있으나 낮은 우선순위 (행동: 링크만 보관)" :
+                    "[1점] 저장 가치 낮음 (행동: 폐기 가능)"
+                  }
+                </p>
+                <p className="text-gray-500 leading-relaxed font-medium">
+                  {
+                    importance === 5 ? "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다." :
+                    importance === 4 ? "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보다 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다." :
+                    importance === 3 ? "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다." :
+                    importance === 2 ? "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다." :
+                    "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SUMMARY SECTION */}
+        <div className="space-y-3" id="form-summary">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block border-b border-gray-200 pb-2">
+            요약 (Summary)
+          </label>
+          <textarea
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="본 리포트/영상 분석에 대한 전체 요약 단락을 입력해 주세요..."
+            rows={3}
+            className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+          />
+        </div>
+
+        {/* KEY POINTS SECTION */}
+        <div className="space-y-3" id="form-keypoints">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block border-b border-gray-200 pb-2">
+            핵심 정리 (Key Points)
+          </label>
+          <div className="space-y-2">
+            {keyPoints.map((point, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <span className="font-bold text-gray-400 text-xs w-5 text-right">{idx + 1}.</span>
+                <input
+                  type="text"
+                  value={point}
+                  onChange={(e) => {
+                    const updated = [...keyPoints];
+                    updated[idx] = e.target.value;
+                    setKeyPoints(updated);
+                  }}
+                  placeholder={`핵심 요약 포인트 ${idx + 1}`}
+                  className="flex-1 text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-5" id="form-sections">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">
+              상세 섹션 분석 (Sections Analysis)
+            </label>
+            <button
+              type="button"
+              onClick={addSection}
+              className="flex items-center gap-1 bg-white hover:bg-gray-50 text-black text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>섹션 추가</span>
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {sections.map((sec, secIdx) => (
+              <div key={sec.id || secIdx} className="border border-gray-200 rounded-lg p-5 bg-white space-y-4 relative">
+                {/* Delete Section button */}
+                <button
+                  type="button"
+                  onClick={() => removeSection(secIdx)}
+                  className="absolute right-4 top-4 text-gray-400 hover:text-rose-600 transition-colors"
+                  title="섹션 삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                <h4 className="text-xs font-bold text-black uppercase tracking-widest">
+                  섹션 {secIdx + 1}
+                </h4>
+
+                <div className="space-y-3">
+                  {/* Section Title */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400">섹션 제목</label>
+                    <input
+                      type="text"
+                      value={sec.title}
+                      onChange={(e) => updateSectionField(secIdx, "title", e.target.value)}
+                      placeholder="예: 01 | [주제] 분석내용 요약"
+                      className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                    />
+                  </div>
+
+                  {/* Section Content */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400">섹션 본문 내용</label>
+                    <textarea
+                      value={sec.content}
+                      onChange={(e) => updateSectionField(secIdx, "content", e.target.value)}
+                      placeholder="구체적인 내용을 자유롭게 기술해 주세요."
+                      rows={4}
+                      className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                    />
+                  </div>
+
+                  {/* Quote inside Section */}
+                  <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200/60 space-y-2.5">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      인용구 (Quote - 선택 사항)
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={sec.quote?.text || ""}
+                        onChange={(e) => updateSectionQuote(secIdx, "text", e.target.value)}
+                        placeholder="인용구 내용"
+                        className="col-span-2 text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                      />
+                      <input
+                        type="text"
+                        value={sec.quote?.author || ""}
+                        onChange={(e) => updateSectionQuote(secIdx, "author", e.target.value)}
+                        placeholder="발언자 이름"
+                        className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Custom Table inside Section */}
+                  <div className="border border-gray-200/60 p-4 rounded-lg space-y-3 bg-gray-50/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        비교/분석 표 (Table - 선택 사항)
+                      </span>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => addColumnToSectionTable(secIdx)}
+                          className="bg-white hover:bg-gray-50 border border-gray-200 text-black text-[10px] font-bold px-2.5 py-1 rounded"
+                        >
+                          열 추가
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addRowToSectionTable(secIdx)}
+                          className="bg-white hover:bg-gray-50 border border-gray-200 text-black text-[10px] font-bold px-2.5 py-1 rounded"
+                        >
+                          행 추가
+                        </button>
+                      </div>
+                    </div>
+
+                    {sec.table && sec.table.headers && sec.table.headers.length > 0 ? (
+                      <div className="overflow-x-auto max-w-full border border-gray-200 rounded-lg bg-white">
+                        <table className="min-w-full divide-y divide-gray-200 text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              {sec.table.headers.map((hdr, hIdx) => (
+                                <th key={hIdx} className="p-2 border-r last:border-r-0 border-gray-200">
+                                  <input
+                                    type="text"
+                                    value={hdr}
+                                    onChange={(e) => updateSectionTableHeader(secIdx, hIdx, e.target.value)}
+                                    className="w-full text-center font-bold text-black bg-transparent border-none outline-none focus:ring-1 focus:ring-black rounded"
+                                    placeholder="헤더명"
+                                  />
+                                </th>
+                              ))}
+                              <th className="p-2 w-8"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {sec.table.rows.map((row, rIdx) => (
+                              <tr key={rIdx}>
+                                {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="p-1 border-r last:border-r-0 border-gray-200">
+                                    <input
+                                      type="text"
+                                      value={cell}
+                                      onChange={(e) => updateSectionTableCell(secIdx, rIdx, cIdx, e.target.value)}
+                                      className="w-full text-xs p-1 border-none bg-transparent outline-none focus:ring-1 focus:ring-black rounded"
+                                      placeholder="데이터 입력"
+                                    />
+                                  </td>
+                                ))}
+                                <td className="p-1 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRowFromSectionTable(secIdx, rIdx)}
+                                    className="text-gray-400 hover:text-rose-600"
+                                  >
+                                    <X className="w-3.5 h-3.5 mx-auto" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-450 italic">비교 표가 구성되지 않았습니다.</p>
+                    )}
+                  </div>
+
+                  {/* Callout Box */}
+                  <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200/60 space-y-2">
+                    <div className="text-[10px] font-bold text-gray-450 uppercase tracking-wider flex items-center justify-between">
+                      <span>핵심 박스 (Callout - 선택 사항)</span>
+                      <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 text-[10px]">
+                        {(['warning', 'positive', 'risk'] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => updateSectionCallout(secIdx, "type", type)}
+                            className={`px-2 py-0.5 rounded capitalize font-bold ${
+                              sec.callout?.type === type
+                                ? "bg-black text-white"
+                                : "text-gray-500 hover:text-black"
+                            }`}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={sec.callout?.text || ""}
+                      onChange={(e) => updateSectionCallout(secIdx, "text", e.target.value)}
+                      placeholder="강조 문구 입력"
+                      className="w-full text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* INVESTMENT VIEW SECTION */}
+        <div className="space-y-5 pt-6 border-t border-gray-200" id="form-investment-view">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">
+              투자 관점 (Investment View)
+            </label>
+            <button
+              type="button"
+              onClick={addMentionedAsset}
+              className="flex items-center gap-1 bg-white hover:bg-gray-50 text-black text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>종목/섹터 추가</span>
+            </button>
+          </div>
+
+          {/* Mentioned Assets */}
+          <div className="space-y-3">
+            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider block">
+              🔎 언급 종목 및 관계
+            </span>
+            {mentionedAssets.map((asset, aIdx) => (
+              <div key={aIdx} className="grid grid-cols-4 gap-2 bg-gray-50/50 p-3 rounded-lg border border-gray-200/60 items-center">
+                <input
+                  type="text"
+                  value={asset.asset}
+                  onChange={(e) => {
+                    const updated = [...mentionedAssets];
+                    updated[aIdx].asset = e.target.value;
+                    setMentionedAssets(updated);
+                  }}
+                  placeholder="종목명 (예: 삼성전자)"
+                  className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+                <input
+                  type="text"
+                  value={asset.relation}
+                  onChange={(e) => {
+                    const updated = [...mentionedAssets];
+                    updated[aIdx].relation = e.target.value;
+                    setMentionedAssets(updated);
+                  }}
+                  placeholder="관계 (예: 수혜, 조정)"
+                  className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+                <input
+                  type="text"
+                  value={asset.context}
+                  onChange={(e) => {
+                    const updated = [...mentionedAssets];
+                    updated[aIdx].context = e.target.value;
+                    setMentionedAssets(updated);
+                  }}
+                  placeholder="상세 설명 (맥락)"
+                  className="col-span-2 text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Bull arguments vs Caveats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Bull args */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                🟢 강세 논거 (Bull Arguments)
+              </span>
+              <textarea
+                value={bullArguments.join("\n")}
+                onChange={(e) => setBullArguments(e.target.value.split("\n"))}
+                placeholder="줄바꿈으로 여러 개의 강세 논거를 분리해 주세요."
+                rows={4}
+                className="w-full text-xs p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
+
+            {/* Caveats */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+                🔴 주의 및 반론 (Bear Risks)
+              </span>
+              <textarea
+                value={caveats.join("\n")}
+                onChange={(e) => setCaveats(e.target.value.split("\n"))}
+                placeholder="줄바꿈으로 여러 개의 반론/리스크를 분리해 주세요."
+                rows={4}
+                className="w-full text-xs p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
+          </div>
+
+          {/* Neutral Evaluation */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+              ⚖️ 중립적 종합 평가 (Neutral Evaluation)
+            </span>
+            <textarea
+              value={neutralEvaluation}
+              onChange={(e) => setNeutralEvaluation(e.target.value)}
+              placeholder="낙관과 비관의 종합 종합 평가를 입력해 주세요."
+              rows={3}
+              className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+            />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

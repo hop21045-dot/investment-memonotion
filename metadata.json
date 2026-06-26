@@ -1,0 +1,6 @@
+{
+  "name": "Content Summarizer and Organizer",
+  "description": "An elegant, AI-powered tool to organize and summarize YouTube videos, Telegram posts, and reports into deeply structured, professional research memos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
