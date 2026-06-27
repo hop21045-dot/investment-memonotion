@@ -30,3 +30,70 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
+
+/* Print styles to make browser PDF export look absolutely stunning and clean */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Hide sidebars, menus, and unnecessary controls */
+  #main-header, 
+  #left-pane, 
+  .sticky, 
+  .no-print, 
+  button,
+  #workflow-toggle-btn {
+    display: none !important;
+  }
+  
+  /* Force containers to act as document blocks rather than screen-sized layout grids */
+  #app-root,
+  #split-layout,
+  #right-pane,
+  [id^="memo-detail-"] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  #document-body {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  /* Smooth paging breaks to keep sections clean */
+  #box-summary, 
+  #box-keypoints, 
+  #box-sections, 
+  #box-investment-view {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: 24px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  tr, td, th {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+}
+

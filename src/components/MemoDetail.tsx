@@ -18,8 +18,83 @@ import {
   TrendingUp,
   AlertTriangle,
   Lightbulb,
-  Globe
+  Globe,
+  Download,
+  ChevronDown
 } from "lucide-react";
+
+// Robust parser to convert basic markdown to HTML for the downloadable report
+function parseMarkdownToHtml(markdown: string): string {
+  if (!markdown) return "";
+  let html = markdown;
+  
+  // Clean special characters to prevent HTML breakages
+  html = html
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Bold (**text** or __text__)
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+  
+  // Italics (*text* or _text_)
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+  
+  // Inline code (`code`)
+  html = html.replace(/`(.*?)`/g, "<code style='background-color: #f1f5f9; color: #dc2626; font-family: monospace; padding: 2px 4px; border-radius: 4px; font-size: 0.85em;'>$1</code>");
+  
+  // Links: [text](url)
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, "<a href='$2' target='_blank' style='color: #2563eb; text-decoration: underline;'>$1</a>");
+  
+  // Convert lines
+  const lines = html.split("\n");
+  let inList = false;
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    
+    // Headers
+    if (trimmed.startsWith("### ")) {
+      return `<h3 style="font-size: 1.1em; font-weight: 700; margin-top: 16px; margin-bottom: 8px; color: #0f172a;">${trimmed.substring(4)}</h3>`;
+    }
+    if (trimmed.startsWith("## ")) {
+      return `<h2 style="font-size: 1.25em; font-weight: 700; margin-top: 24px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; color: #0f172a;">${trimmed.substring(3)}</h2>`;
+    }
+    if (trimmed.startsWith("# ")) {
+      return `<h1 style="font-size: 1.5em; font-weight: 800; margin-top: 28px; margin-bottom: 16px; color: #0f172a;">${trimmed.substring(2)}</h1>`;
+    }
+    
+    // Unordered Lists
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      const content = trimmed.substring(2);
+      let listElement = `<li style="margin-bottom: 6px;">${content}</li>`;
+      if (!inList) {
+        inList = true;
+        listElement = `<ul style="list-style-type: disc; padding-left: 20px; margin-top: 8px; margin-bottom: 8px; color: #334155;">` + listElement;
+      }
+      return listElement;
+    } else {
+      if (inList) {
+        inList = false;
+        return `</ul><p style="margin-top: 0; margin-bottom: 12px; color: #334155; line-height: 1.6;">${trimmed}</p>`;
+      }
+    }
+    
+    // Empty line
+    if (trimmed === "") {
+      return "";
+    }
+    
+    return `<p style="margin-top: 0; margin-bottom: 12px; color: #334155; line-height: 1.6;">${trimmed}</p>`;
+  });
+  
+  if (inList) {
+    processedLines.push("</ul>");
+  }
+  
+  return processedLines.filter(line => line !== "").join("\n");
+}
 
 interface MemoDetailProps {
   report: StructuredReport | null;
@@ -30,11 +105,488 @@ interface MemoDetailProps {
 export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps) {
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+
 
   // Reset delete confirmation when active report changes
   useEffect(() => {
     setShowDeleteConfirm(false);
   }, [report?.id]);
+
+  // Close dropdown when clicked outside
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setShowDownloadDropdown(false);
+    };
+    if (showDownloadDropdown) {
+      window.addEventListener("click", handleOutsideClick);
+    }
+    return () => {
+      window.removeEventListener("click", handleOutsideClick);
+    };
+  }, [showDownloadDropdown]);
+
+  const toggleDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDownloadDropdown(!showDownloadDropdown);
+  };
+
+  const handleDownloadPdf = () => {
+    window.print();
+  };
+
+  const handleDownloadHtml = () => {
+    if (!report) return;
+
+    // Helper functions can be used to construct the lists and conditional blocks cleanly
+    const sourceLinksHtml = (() => {
+      const hasUrls = report.sourceUrls && report.sourceUrls.filter(u => u.trim()).length > 0;
+      if (!hasUrls && !report.sourceUrl) return '';
+
+      let linksContent = '';
+      if (hasUrls) {
+        linksContent = report.sourceUrls!
+          .filter(u => u.trim())
+          .map((url, idx) => {
+            const href = url.startsWith('http') ? url : 'https://' + url;
+            return `<div style="margin-bottom: 4px;"><a href="${href}" target="_blank" style="color: #2563eb; text-decoration: none;">출처 ${idx + 1}: ${url}</a></div>`;
+          })
+          .join('');
+      } else if (report.sourceUrl) {
+        const href = report.sourceUrl.startsWith('http') ? report.sourceUrl : 'https://' + report.sourceUrl;
+        linksContent = `<a href="${href}" target="_blank" style="color: #2563eb; text-decoration: none;">${report.sourceUrl}</a>`;
+      }
+
+      return `
+        <div class="property-label">🔗 출처 링크</div>
+        <div class="property-value">${linksContent}</div>
+      `;
+    })();
+
+    const attachedPdfHtml = report.attachedPdfName ? `
+      <div class="property-label">📄 첨부 파일</div>
+      <div class="property-value">${report.attachedPdfName} (${report.attachedPdfSize || "Unknown size"})</div>
+    ` : '';
+
+    const sectorsHtml = (report.sectors && report.sectors.length > 0) ? `
+      <div class="property-label">🏷️ 주요 섹터</div>
+      <div class="property-value">
+        ${report.sectors.map(sec => `<span style="background-color: #eef2ff; color: #4f46e5; border: 1px solid #e0e7ff; padding: 2px 8px; margin-right: 6px; border-radius: 4px; font-weight: bold;">#${sec}</span>`).join('')}
+      </div>
+    ` : '';
+
+    const keyPointsHtml = report.keyPoints.map(p => `<li style="margin-bottom: 8px;">${p}</li>`).join('');
+
+    const sectionsHtml = report.sections.map((sec, sIdx) => {
+      const quoteHtml = sec.quote && sec.quote.text ? `
+        <blockquote>
+          "${sec.quote.text}"
+          <span style="display: block; text-align: right; font-size: 0.85em; color: #64748b; margin-top: 6px; font-weight: 600;">— ${sec.quote.author}</span>
+        </blockquote>
+      ` : '';
+
+      const tableHtml = sec.table && sec.table.headers && sec.table.headers.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              ${sec.table.headers.map(h => `<th>${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${sec.table.rows.map(row => `
+              <tr>
+                ${row.map(cell => `<td>${cell}</td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '';
+
+      const calloutHtml = sec.callout && sec.callout.text ? `
+        <div class="callout callout-${sec.callout.type}">
+          <div style="font-size: 1.1em; line-height: 1;">
+            ${sec.callout.type === "warning" ? "⚠️" : sec.callout.type === "positive" ? "✅" : "❌"}
+          </div>
+          <div>
+            <strong>${
+              sec.callout.type === "warning" ? "주의 사항 (Warning)" : 
+              sec.callout.type === "positive" ? "체크 포인트 (Key Positive)" : "리스크 요인 (Risk Factors)"
+            }</strong>
+            <div style="margin-top: 4px; color: #475569;">${sec.callout.text}</div>
+          </div>
+        </div>
+      ` : '';
+
+      return `
+        <div style="margin-bottom: 32px; border-left: 3px solid #cbd5e1; padding-left: 16px; margin-top: 24px;">
+          <h3 style="margin-top: 0; color: #0f172a;">SEC ${sIdx + 1}. ${sec.title}</h3>
+          <div>${parseMarkdownToHtml(sec.content)}</div>
+          ${quoteHtml}
+          ${tableHtml}
+          ${calloutHtml}
+        </div>
+      `;
+    }).join('');
+
+    const mentionedAssetsHtml = report.investmentView.mentionedAssets && report.investmentView.mentionedAssets.length > 0 ? `
+      <table>
+        <thead>
+          <tr>
+            <th>종목·섹터</th>
+            <th>관계</th>
+            <th>맥락 (Context)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${report.investmentView.mentionedAssets.map(asset => `
+            <tr>
+              <td style="font-weight: 700; color: #0f172a;">${asset.asset}</td>
+              <td><span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 700; border: 1px solid #e2e8f0;">${asset.relation}</span></td>
+              <td>${asset.context}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : '<p style="color: #64748b; font-size: 0.9em; font-style: italic;">분석된 관련 종목이 없습니다.</p>';
+
+    const bullArgumentsHtml = report.investmentView.bullArguments.map(arg => `<li style="margin-bottom: 6px; color: #166534; font-weight: 550;">${arg}</li>`).join('');
+    const caveatsHtml = report.investmentView.caveats.map(arg => `<li style="margin-bottom: 6px; color: #991b1b; font-weight: 550;">${arg}</li>`).join('');
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${report.title} - InvestInsight Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1a1a1a;
+      background-color: #ffffff;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    /* Notion style elements */
+    h1 {
+      font-size: 2.2em;
+      font-weight: 800;
+      margin-top: 10px;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+      color: #111111;
+    }
+    h2 {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin-top: 40px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+      color: #111111;
+    }
+    h3 {
+      font-size: 1.15em;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: #2d3748;
+    }
+    p {
+      margin-top: 0;
+      margin-bottom: 16px;
+      color: #334155;
+    }
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+    li {
+      margin-bottom: 8px;
+      color: #334155;
+    }
+    blockquote {
+      margin: 20px 0;
+      padding: 12px 20px;
+      border-left: 4px solid #1a1a1a;
+      background-color: #f8fafc;
+      font-style: italic;
+      color: #475569;
+      border-radius: 0 8px 8px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9em;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    td {
+      color: #334155;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid;
+    }
+    .badge-youtube { background-color: #fef2f2; border-color: #fee2e2; color: #dc2626; }
+    .badge-telegram { background-color: #f0f9ff; border-color: #e0f2fe; color: #0284c7; }
+    .badge-report { background-color: #f0fdf4; border-color: #dcfce7; color: #16a34a; }
+    .badge-webpage { background-color: #e0e7ff; border-color: #c7d2fe; color: #4f46e5; }
+    
+    .badge-verified-o { background-color: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+    .badge-verified-x { background-color: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    
+    .badge-status { background-color: #f1f5f9; border-color: #e2e8f0; color: #475569; }
+    .badge-action { background-color: #e0e7ff; border-color: #c7d2fe; color: #4338ca; border-radius: 9999px; }
+
+    /* Notion Grid */
+    .properties-grid {
+      display: grid;
+      grid-template-cols: 140px 1fr;
+      row-gap: 14px;
+      margin-top: 24px;
+      margin-bottom: 32px;
+      padding: 24px 0;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.85em;
+    }
+    .property-label {
+      color: #64748b;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+    }
+    .property-value {
+      color: #0f172a;
+      font-weight: 600;
+    }
+    
+    .summary-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .summary-title {
+      font-size: 0.8em;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0;
+      margin-bottom: 14px;
+      color: #0f172a;
+    }
+    
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid;
+      margin: 16px 0;
+      font-size: 0.9em;
+    }
+    .callout-warning { background-color: #fffbeb; border-color: #fef3c7; color: #78350f; }
+    .callout-positive { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .callout-risk { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    
+    .investment-dual-grid {
+      display: grid;
+      grid-template-cols: 1fr 1fr;
+      gap: 20px;
+      margin: 24px 0;
+    }
+    @media (max-width: 600px) {
+      .investment-dual-grid {
+        grid-template-cols: 1fr;
+      }
+    }
+    .investment-box {
+      border-radius: 12px;
+      border: 1px solid;
+      padding: 20px;
+    }
+    .bull-box { background-color: #f0fdf4; border-color: #dcfce7; }
+    .bear-box { background-color: #fef2f2; border-color: #fee2e2; }
+    .investment-box-title {
+      font-size: 0.85em;
+      font-weight: 800;
+      margin-top: 0;
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        background-color: #ffffff;
+      }
+      .container {
+        max-width: 100%;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+    
+    .print-button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: #1e293b;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85em;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    .btn:hover { background-color: #0f172a; }
+    .btn-secondary {
+      background-color: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover { background-color: #f8fafc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="print-button-container no-print">
+      <button class="btn btn-secondary" onclick="window.print()">
+        🖨️ PDF 파일로 저장 / 인쇄
+      </button>
+    </div>
+    
+    <div class="badge badge-${report.category}">${report.category}</div>
+    <h1 style="margin-top: 12px;">${report.title}</h1>
+    
+    <div class="properties-grid">
+      <div class="property-label">📁 카테고리</div>
+      <div class="property-value">${report.category.toUpperCase()}</div>
+      
+      <div class="property-label">📅 정리 일자</div>
+      <div class="property-value">${report.date}</div>
+      
+      <div class="property-label">🛡️ 검증 여부</div>
+      <div class="property-value">
+        <span class="badge ${report.verified === "O" ? "badge-verified-o" : "badge-verified-x"}">
+          ${report.verified === "O" ? "O (검증완료)" : "X (미검증)"}
+        </span>
+      </div>
+      
+      <div class="property-label">⚙️ 상태</div>
+      <div class="property-value">
+        <span class="badge badge-status">${report.status || "요약완료"}</span>
+      </div>
+      
+      <div class="property-label">🎯 액션</div>
+      <div class="property-value">
+        <span class="badge badge-action">${report.action || "선택 안함"}</span>
+      </div>
+      
+      <div class="property-label">⭐️ 중요도 등급</div>
+      <div class="property-value">
+        ${"★".repeat(report.importance || 0)}${"☆".repeat(5 - (report.importance || 0))} (${report.importance || 0} / 5 점)
+      </div>
+      
+      ${sourceLinksHtml}
+      ${attachedPdfHtml}
+      ${sectorsHtml}
+    </div>
+    
+    <div class="summary-box">
+      <h3 class="summary-title">💡 요약 (Summary)</h3>
+      <div>${parseMarkdownToHtml(report.summary)}</div>
+    </div>
+    
+    <h2>📌 핵심 정리 (Key Points)</h2>
+    <ul style="list-style-type: disc; padding-left: 20px; line-height: 1.8;">
+      ${keyPointsHtml}
+    </ul>
+    
+    <h2 style="margin-top: 40px;">상세 섹션 분석 (Section Analysis)</h2>
+    ${sectionsHtml}
+    
+    <h2 style="margin-top: 48px;">📊 투자 관점 (Investment View)</h2>
+    
+    <h3 style="margin-top: 24px;">🔎 언급 종목 및 섹터</h3>
+    ${mentionedAssetsHtml}
+    
+    <div class="investment-dual-grid">
+      <div class="investment-box bull-box">
+        <h4 class="investment-box-title" style="color: #166534;">🟢 강세 논거 (Bull Thesis)</h4>
+        <ul style="padding-left: 20px; margin: 0; line-height: 1.8;">
+          ${bullArgumentsHtml}
+        </ul>
+      </div>
+      
+      <div class="investment-box bear-box">
+        <h4 class="investment-box-title" style="color: #991b1b;">🔴 주의 및 반론 (Bear Risks)</h4>
+        <ul style="padding-left: 20px; margin: 0; line-height: 1.8;">
+          ${caveatsHtml}
+        </ul>
+      </div>
+    </div>
+    
+    <h3 style="margin-top: 28px;">⚖️ 중립적 종합 평가</h3>
+    <div style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; font-weight: 500;">
+      ${parseMarkdownToHtml(report.investmentView.neutralEvaluation)}
+    </div>
+    
+    <div style="margin-top: 56px; border-top: 1px solid #e2e8f0; padding-top: 24px; text-align: center;">
+      <p style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">
+        ※ 본 내용은 정보 제공 목적이며 투자 권유가 아닙니다. 모든 투자의 결과와 책임은 투자자 본인에게 귀속됩니다.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${report.title.replace(/[/\\?%*:|"<>]/g, '_')}_notion_report.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const renderStars = (rating?: number) => {
     if (rating === undefined || rating === null) return null;
@@ -230,10 +782,49 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 no-print">
+          {/* 리포트 다운로드 드롭다운 */}
+          <div className="relative no-print">
+            <button
+              onClick={toggleDropdown}
+              className="flex items-center gap-1.5 bg-[#1A1A1A] hover:bg-black text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>리포트 다운로드</span>
+              <ChevronDown className="w-3 h-3 opacity-80" />
+            </button>
+            
+            {showDownloadDropdown && (
+              <div className="absolute right-0 mt-1.5 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1.5 z-30 animate-fade-in">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadPdf();
+                    setShowDownloadDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-semibold cursor-pointer"
+                >
+                  <span>🖨️</span>
+                  <span>PDF 파일로 저장 (인쇄)</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadHtml();
+                    setShowDownloadDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-semibold cursor-pointer"
+                >
+                  <span>🌐</span>
+                  <span>HTML 파일로 다운로드</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleCopyMarkdown}
-            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-black font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all"
+            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-black font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all no-print"
             title="Copy for Notion/Telegram"
           >
             {copied ? (
@@ -248,17 +839,17 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
               </>
             )}
           </button>
-
+          
           <button
             onClick={onEdit}
-            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-black font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all"
+            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-black font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all no-print"
           >
             <Edit className="w-3.5 h-3.5" />
             <span>편집</span>
           </button>
 
           {showDeleteConfirm ? (
-            <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 p-1 rounded-lg text-xs animate-fade-in">
+            <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 p-1 rounded-lg text-xs animate-fade-in no-print">
               <span className="text-red-700 font-bold px-2">정말 삭제할까요?</span>
               <button
                 onClick={() => {
@@ -279,7 +870,7 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
           ) : (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-1.5 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-gray-600 border border-gray-200 font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-gray-600 border border-gray-200 font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer no-print"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>삭제</span>
