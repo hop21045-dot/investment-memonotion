@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "StructuredReport": {
+      "title": "StructuredReport",
+      "description": "An AI-powered research memo and summary report of an asset or market development.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string", "enum": ["youtube", "telegram", "report", "webpage"] },
+        "sourceUrl": { "type": "string" },
+        "sourceUrls": { "type": "array" },
+        "summary": { "type": "string" },
+        "keyPoints": { "type": "array" },
+        "sections": { "type": "array" },
+        "investmentView": { "type": "object" },
+        "rawText": { "type": "string" },
+        "attachedPdfName": { "type": "string" },
+        "attachedPdfSize": { "type": "string" },
+        "sectors": { "type": "array" },
+        "importance": { "type": "integer" },
+        "verified": { "type": "string", "enum": ["O", "X"] },
+        "status": { "type": "string" },
+        "action": { "type": "string" }
+      },
+      "required": ["id", "title", "date", "category", "summary", "keyPoints", "sections", "investmentView"]
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "StructuredReport",
+      "description": "The collection of research reports and summaries."
+    }
+  }
+}

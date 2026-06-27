@@ -5,7 +5,8 @@ import MemoList from "./components/MemoList";
 import MemoDetail from "./components/MemoDetail";
 import MemoEditor from "./components/MemoEditor";
 import ProcessWorkflow from "./components/ProcessWorkflow";
-import { Sparkles, Layers, BookOpen, ChevronLeft, Video, MessageSquare, FileText, ClipboardList } from "lucide-react";
+import { Sparkles, Layers, BookOpen, ChevronLeft, Video, MessageSquare, FileText, ClipboardList, RefreshCw } from "lucide-react";
+import { getReportsFromFirestore, saveReportToFirestore, deleteReportFromFirestore } from "./firebase";
 
 export default function App() {
   const [reports, setReports] = useState<StructuredReport[]>([]);
@@ -16,28 +17,101 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
+  // Cloud sync states
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [cloudConnected, setCloudConnected] = useState<boolean>(false);
+
   const handleSelectSector = (sector: string) => {
     setSearch(`#${sector}`);
     // Show mobile list so mobile users see the filtered list of contents
     setIsMobileListVisible(true);
   };
 
-  // Load initial reports from localStorage or sample data
+  // Sync data function
+  const syncData = async (localReports: StructuredReport[]) => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      const dbReports = await getReportsFromFirestore();
+      setCloudConnected(true);
+
+      let finalReports: StructuredReport[] = [];
+
+      if (dbReports.length === 0) {
+        if (localReports.length > 0) {
+          // Local has data, cloud is empty: Sync local to cloud
+          for (const report of localReports) {
+            await saveReportToFirestore(report);
+          }
+          finalReports = localReports;
+        } else {
+          // Both empty: Sync sample reports to cloud and local
+          for (const report of SAMPLE_REPORTS) {
+            await saveReportToFirestore(report);
+          }
+          finalReports = SAMPLE_REPORTS;
+        }
+      } else {
+        // Cloud has data. Merge bidirectionally so local-only files are uploaded, but cloud-existing takes priority.
+        const mergedMap = new Map<string, StructuredReport>();
+        localReports.forEach(r => mergedMap.set(r.id, r));
+        dbReports.forEach(r => mergedMap.set(r.id, r));
+        
+        finalReports = Array.from(mergedMap.values());
+        
+        // Upload local-only reports to cloud
+        for (const r of localReports) {
+          const alreadyInCloud = dbReports.some(d => d.id === r.id);
+          if (!alreadyInCloud) {
+            await saveReportToFirestore(r);
+          }
+        }
+      }
+
+      setReports(finalReports);
+      localStorage.setItem("insight_memos", JSON.stringify(finalReports));
+      
+      // Select first report if none selected
+      if (finalReports.length > 0) {
+        setSelectedReportId(prev => {
+          if (prev && finalReports.some(r => r.id === prev)) {
+            return prev;
+          }
+          return finalReports[0].id;
+        });
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      setCloudConnected(false);
+      setSyncError(error instanceof Error ? error.message : "동기화 오류");
+      
+      // Fallback to local
+      if (localReports.length > 0) {
+        setReports(localReports);
+        setSelectedReportId(prev => prev || localReports[0].id);
+      } else {
+        setReports(SAMPLE_REPORTS);
+        setSelectedReportId(prev => prev || SAMPLE_REPORTS[0].id);
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Load initial reports from localStorage and initiate cloud sync
   useEffect(() => {
+    let initialLocal: StructuredReport[] = [];
     const saved = localStorage.getItem("insight_memos");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setReports(parsed);
-        if (parsed.length > 0) {
-          setSelectedReportId(parsed[0].id);
+        initialLocal = JSON.parse(saved);
+        setReports(initialLocal);
+        if (initialLocal.length > 0) {
+          setSelectedReportId(initialLocal[0].id);
         }
       } catch (e) {
-        console.error("Failed to parse saved memos, resetting to sample", e);
-        setReports(SAMPLE_REPORTS);
-        if (SAMPLE_REPORTS.length > 0) {
-          setSelectedReportId(SAMPLE_REPORTS[0].id);
-        }
+        console.error("Failed to parse saved memos on mount", e);
       }
     } else {
       setReports(SAMPLE_REPORTS);
@@ -45,7 +119,23 @@ export default function App() {
         setSelectedReportId(SAMPLE_REPORTS[0].id);
       }
     }
+
+    // Trigger Firestore Sync
+    syncData(initialLocal);
   }, []);
+
+  const triggerManualSync = () => {
+    const saved = localStorage.getItem("insight_memos");
+    let currentLocal: StructuredReport[] = [];
+    if (saved) {
+      try {
+        currentLocal = JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    syncData(currentLocal);
+  };
 
   // Save to localStorage whenever reports state changes
   const saveReports = (updatedReports: StructuredReport[]) => {
@@ -68,7 +158,7 @@ export default function App() {
     setIsMobileListVisible(false);
   };
 
-  const handleSaveReport = (report: StructuredReport) => {
+  const handleSaveReport = async (report: StructuredReport) => {
     const exists = reports.some((r) => r.id === report.id);
     let updated: StructuredReport[];
 
@@ -81,9 +171,23 @@ export default function App() {
     saveReports(updated);
     setSelectedReportId(report.id);
     setIsEditing(false);
+
+    // Sync to Firestore in background
+    setIsSyncing(true);
+    try {
+      await saveReportToFirestore(report);
+      setCloudConnected(true);
+      setSyncError(null);
+    } catch (e) {
+      console.error("Failed to save to Firestore:", e);
+      setCloudConnected(false);
+      setSyncError("저장 동기화 실패");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
     const updated = reports.filter((r) => r.id !== id);
     saveReports(updated);
     
@@ -96,6 +200,20 @@ export default function App() {
     }
     setIsEditing(false);
     setIsMobileListVisible(true);
+
+    // Sync to Firestore in background
+    setIsSyncing(true);
+    try {
+      await deleteReportFromFirestore(id);
+      setCloudConnected(true);
+      setSyncError(null);
+    } catch (e) {
+      console.error("Failed to delete from Firestore:", e);
+      setCloudConnected(false);
+      setSyncError("삭제 동기화 실패");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const activeReport = reports.find((r) => r.id === selectedReportId) || null;
@@ -119,39 +237,71 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mobile back button if viewing detail of memos */}
-        {!isMobileListVisible && (
+        {/* Cloud Synchronization Status Indicator */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isSyncing ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-indigo-100 bg-indigo-50/70 text-indigo-700 text-[11px] font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+              동기화 진행 중...
+            </div>
+          ) : cloudConnected ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-100 bg-emerald-50/70 text-emerald-700 text-[11px] font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              클라우드 동기화 완료
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-100 bg-amber-50/70 text-amber-700 text-[11px] font-bold" title={syncError || "클라우드 데이터베이스에 연결할 수 없습니다."}>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+              로컬 저장 모드
+            </div>
+          )}
+
+          <button
+            onClick={triggerManualSync}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-[11px] text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200/80 font-bold transition-all cursor-pointer disabled:opacity-50"
+            title="실시간 클라우드 데이터 새로고침 및 동기화"
+          >
+            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>동기화</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Mobile back button if viewing detail of memos */}
+          {!isMobileListVisible && (
+            <button
+              onClick={() => {
+                setIsMobileListVisible(true);
+                setShowWorkflow(false);
+              }}
+              className="md:hidden flex items-center gap-1.5 text-xs text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-semibold transition-all"
+              id="mobile-back-button"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>목록 보기</span>
+            </button>
+          )}
+
+          {/* Process workflow toggle button */}
           <button
             onClick={() => {
-              setIsMobileListVisible(true);
-              setShowWorkflow(false);
+              setShowWorkflow(!showWorkflow);
+              if (!showWorkflow) {
+                setIsMobileListVisible(false); // hide list on mobile to focus on workflow
+              }
             }}
-            className="md:hidden flex items-center gap-1.5 text-xs text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-semibold transition-all"
-            id="mobile-back-button"
+            className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all border ${
+              showWorkflow
+                ? "bg-black text-white border-black shadow-sm"
+                : "bg-white text-slate-700 hover:text-black hover:bg-slate-50 border-gray-200"
+            }`}
+            id="workflow-toggle-btn"
           >
-            <ChevronLeft className="w-4 h-4" />
-            <span>목록 보기</span>
+            <ClipboardList className="w-4.5 h-4.5" />
+            <span>📊 자료 관리 프로세스</span>
           </button>
-        )}
-
-        {/* Process workflow toggle button */}
-        <button
-          onClick={() => {
-            setShowWorkflow(!showWorkflow);
-            if (!showWorkflow) {
-              setIsMobileListVisible(false); // hide list on mobile to focus on workflow
-            }
-          }}
-          className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all border ${
-            showWorkflow
-              ? "bg-black text-white border-black shadow-sm"
-              : "bg-white text-slate-700 hover:text-black hover:bg-slate-50 border-gray-200"
-          }`}
-          id="workflow-toggle-btn"
-        >
-          <ClipboardList className="w-4.5 h-4.5" />
-          <span>📊 자료 관리 프로세스</span>
-        </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
