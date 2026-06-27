@@ -100,9 +100,10 @@ interface MemoDetailProps {
   report: StructuredReport | null;
   onEdit: () => void;
   onDelete: (id: string) => void;
+  onSelectSector?: (sector: string) => void;
 }
 
-export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps) {
+export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }: MemoDetailProps) {
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
@@ -1013,7 +1014,8 @@ export default function MemoDetail({ report, onEdit, onDelete }: MemoDetailProps
                   {report.sectors.map((sec, idx) => (
                     <span
                       key={idx}
-                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100/50 px-2.5 py-0.5 rounded text-xs font-bold transition-colors"
+                      onClick={() => onSelectSector && onSelectSector(sec)}
+                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100/50 px-2.5 py-0.5 rounded text-xs font-bold transition-colors cursor-pointer"
                     >
                       #{sec}
                     </span>

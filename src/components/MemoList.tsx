@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { StructuredReport } from "../types";
 import { Search, Plus, Video, MessageSquare, FileText, Sparkles, TrendingUp, Globe } from "lucide-react";
 
@@ -7,6 +7,10 @@ interface MemoListProps {
   selectedReportId: string | null;
   onSelectReport: (id: string) => void;
   onAddClick: () => void;
+  search: string;
+  setSearch: (s: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (c: string) => void;
 }
 
 export default function MemoList({
@@ -14,19 +18,32 @@ export default function MemoList({
   selectedReportId,
   onSelectReport,
   onAddClick,
+  search,
+  setSearch,
+  categoryFilter,
+  setCategoryFilter,
 }: MemoListProps) {
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const filteredReports = reports.filter((report) => {
-    const matchesSearch =
-      report.title.toLowerCase().includes(search.toLowerCase()) ||
-      report.summary.toLowerCase().includes(search.toLowerCase()) ||
-      (report.sectors && report.sectors.some(s => s.toLowerCase().includes(search.toLowerCase()))) ||
-      (report.rawText && report.rawText.toLowerCase().includes(search.toLowerCase()));
-
+    const query = search.trim();
     const matchesCategory =
       categoryFilter === "all" || report.category === categoryFilter;
+
+    if (!query) return matchesCategory;
+
+    if (query.startsWith('#')) {
+      const sectorQuery = query.slice(1).toLowerCase();
+      const matchesSector = report.sectors && report.sectors.some(
+        s => s.toLowerCase() === sectorQuery || s.toLowerCase().includes(sectorQuery)
+      );
+      return matchesSector && matchesCategory;
+    }
+
+    const matchesSearch =
+      report.title.toLowerCase().includes(query.toLowerCase()) ||
+      report.summary.toLowerCase().includes(query.toLowerCase()) ||
+      (report.sectors && report.sectors.some(s => s.toLowerCase().includes(query.toLowerCase()))) ||
+      (report.rawText && report.rawText.toLowerCase().includes(query.toLowerCase()));
 
     return matchesSearch && matchesCategory;
   });
@@ -195,8 +212,18 @@ export default function MemoList({
             placeholder="Search your knowledge archive..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-gray-100 border-none rounded-full py-2.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-gray-300 outline-none text-[#1A1A1A] transition-all"
+            className="w-full bg-gray-100 border-none rounded-full py-2.5 pl-10 pr-10 text-sm focus:ring-1 focus:ring-gray-300 outline-none text-[#1A1A1A] transition-all"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3.5 top-2.5 p-0.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <button
@@ -269,7 +296,14 @@ export default function MemoList({
                   {getStatusColorBadge(report.status)}
                   {report.sectors && report.sectors.length > 0 && (
                     report.sectors.map((sec, idx) => (
-                      <span key={idx} className="bg-indigo-50/70 text-indigo-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                      <span
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card selection
+                          setSearch(`#${sec}`);
+                        }}
+                        className="bg-indigo-50/70 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all"
+                      >
                         #{sec}
                       </span>
                     ))

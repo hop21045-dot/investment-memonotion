@@ -13,6 +13,14 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [isMobileListVisible, setIsMobileListVisible] = useState(true);
   const [showWorkflow, setShowWorkflow] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  const handleSelectSector = (sector: string) => {
+    setSearch(`#${sector}`);
+    // Show mobile list so mobile users see the filtered list of contents
+    setIsMobileListVisible(true);
+  };
 
   // Load initial reports from localStorage or sample data
   useEffect(() => {
@@ -161,6 +169,10 @@ export default function App() {
             selectedReportId={selectedReportId}
             onSelectReport={handleSelectReport}
             onAddClick={handleCreateNew}
+            search={search}
+            setSearch={setSearch}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
           />
         </div>
 
@@ -184,6 +196,7 @@ export default function App() {
               report={activeReport}
               onEdit={() => setIsEditing(true)}
               onDelete={handleDeleteReport}
+              onSelectSector={handleSelectSector}
             />
           )}
         </div>
