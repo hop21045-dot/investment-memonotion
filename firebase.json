@@ -1,0 +1,6 @@
+{
+  "firestore": {
+    "database": "ai-studio-investmentmemo-492e14ad-df26-4964-a576-fe89800cf58d",
+    "rules": "firestore.rules"
+  }
+}

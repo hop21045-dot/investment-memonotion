@@ -606,7 +606,8 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       rawText: report?.rawText,
       attachedPdfName: report?.attachedPdfName,
       attachedPdfSize: report?.attachedPdfSize,
-      sectors: sectors.filter(s => s.trim() !== "")
+      sectors: sectors.filter(s => s.trim() !== ""),
+      updatedAt: Date.now()
     };
 
     onSave(savedReport);

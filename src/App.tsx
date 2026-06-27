@@ -53,20 +53,31 @@ export default function App() {
           finalReports = SAMPLE_REPORTS;
         }
       } else {
-        // Cloud has data. Merge bidirectionally so local-only files are uploaded, but cloud-existing takes priority.
+        // Cloud has data. Merge bidirectionally using updatedAt (last-write-wins).
         const mergedMap = new Map<string, StructuredReport>();
-        localReports.forEach(r => mergedMap.set(r.id, r));
+        
+        const isNewer = (a: StructuredReport, b: StructuredReport) => {
+          const timeA = a.updatedAt || 0;
+          const timeB = b.updatedAt || 0;
+          return timeA > timeB;
+        };
+
+        // Seed with database reports first
         dbReports.forEach(r => mergedMap.set(r.id, r));
-        
-        finalReports = Array.from(mergedMap.values());
-        
-        // Upload local-only reports to cloud
+
+        // Merge local reports: if newer or not present, overwrite and upload to cloud
         for (const r of localReports) {
-          const alreadyInCloud = dbReports.some(d => d.id === r.id);
-          if (!alreadyInCloud) {
+          const existing = mergedMap.get(r.id);
+          if (!existing) {
+            mergedMap.set(r.id, r);
+            await saveReportToFirestore(r);
+          } else if (isNewer(r, existing)) {
+            mergedMap.set(r.id, r);
             await saveReportToFirestore(r);
           }
         }
+
+        finalReports = Array.from(mergedMap.values());
       }
 
       setReports(finalReports);
