@@ -220,7 +220,10 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
 
       return `
         <div style="margin-bottom: 32px; border-left: 3px solid #cbd5e1; padding-left: 16px; margin-top: 24px;">
-          <h3 style="margin-top: 0; color: #0f172a;">SEC ${sIdx + 1}. ${sec.title}</h3>
+          <h3 style="margin-top: 0; color: #0f172a; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+            <span>SEC ${sIdx + 1}. ${sec.title}</span>
+            ${sec.source ? `<span style="font-size: 0.75em; font-weight: normal; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px;">출처: ${sec.source}</span>` : ''}
+          </h3>
           <div>${parseMarkdownToHtml(sec.content)}</div>
           ${quoteHtml}
           ${tableHtml}
@@ -686,7 +689,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
     md += `\n`;
 
     report.sections.forEach((sec) => {
-      md += `## ${sec.title}\n\n`;
+      md += `## ${sec.title}${sec.source ? ` (출처: ${sec.source})` : ""}\n\n`;
       md += `${sec.content}\n\n`;
       if (sec.quote) {
         md += `> "${sec.quote.text}"\n> — *${sec.quote.author}*\n\n`;
@@ -1065,12 +1068,20 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
           <div className="space-y-8">
             {report.sections.map((sec, sIdx) => (
               <div key={sec.id || sIdx} className="space-y-3.5 border-l-2 border-gray-200 pl-4 md:pl-5 py-0.5">
-                <h4 className="text-base md:text-lg font-bold text-[#1A1A1A] flex items-center gap-2">
-                  <span className="text-black font-mono text-[10px] tracking-wider uppercase bg-gray-100 px-2 py-0.5 rounded font-bold">
-                    SEC {sIdx + 1}
-                  </span>
-                  {sec.title}
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap">
+                  <h4 className="text-base md:text-lg font-bold text-[#1A1A1A] flex items-center gap-2">
+                    <span className="text-black font-mono text-[10px] tracking-wider uppercase bg-gray-100 px-2 py-0.5 rounded font-bold">
+                      SEC {sIdx + 1}
+                    </span>
+                    {sec.title}
+                  </h4>
+                  {sec.source && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-gray-500 bg-gray-50 border border-gray-200/60 px-2.5 py-1 rounded-lg shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                      출처: {sec.source}
+                    </span>
+                  )}
+                </div>
                 <div className="markdown-body prose max-w-none text-sm text-slate-750 leading-relaxed text-justify space-y-1">
                   <ReactMarkdown>{sec.content}</ReactMarkdown>
                 </div>

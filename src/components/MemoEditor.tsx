@@ -52,7 +52,8 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
       "callout": {
         "type": "warning", // 'warning', 'info', 'idea' 중 내용에 어울리는 타입 선택
         "text": "노션 스타일의 콜아웃 박스에 들어갈 중요 체크포인트 및 알림 내용"
-      }
+      },
+      "source": "이 섹션 분석 내용의 구체적 출처 정보 (예: '유튜브 04:12경', '보고서 12페이지', '텔레그램 포스트 @채널명' 등. 구체적인 타임스탬프, 페이지, 채널명 또는 발언처를 간단히 한글로 기입, 없으면 빈 문자열)"
     }
   ],
   "investmentView": {
@@ -413,7 +414,8 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               type: sec.callout.type || "warning",
               text: sec.callout.text || ""
             } : { type: "warning", text: "" },
-            table: parsedTable
+            table: parsedTable,
+            source: sec.source || ""
           };
         });
         setSections(parsedSections);
@@ -535,7 +537,8 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               type: sec.callout.type || "warning",
               text: sec.callout.text || ""
             } : { type: "warning", text: "" },
-            table: parsedTable
+            table: parsedTable,
+            source: sec.source || ""
           };
         });
         setSections(parsedSections);
@@ -1336,16 +1339,28 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 </h4>
 
                 <div className="space-y-3">
-                  {/* Section Title */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400">섹션 제목</label>
-                    <input
-                      type="text"
-                      value={sec.title}
-                      onChange={(e) => updateSectionField(secIdx, "title", e.target.value)}
-                      placeholder="예: 01 | [주제] 분석내용 요약"
-                      className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                    />
+                  {/* Section Title and Source Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400">섹션 제목</label>
+                      <input
+                        type="text"
+                        value={sec.title}
+                        onChange={(e) => updateSectionField(secIdx, "title", e.target.value)}
+                        placeholder="예: 01 | [주제] 분석내용 요약"
+                        className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black font-semibold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400">출처 (간단 표기)</label>
+                      <input
+                        type="text"
+                        value={sec.source || ""}
+                        onChange={(e) => updateSectionField(secIdx, "source", e.target.value)}
+                        placeholder="예: 유튜브 04:12, 보고서 p.5"
+                        className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                      />
+                    </div>
                   </div>
 
                   {/* Section Content */}

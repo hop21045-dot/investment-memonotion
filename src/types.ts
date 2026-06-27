@@ -20,6 +20,7 @@ export interface Section {
   quote?: Quote;
   table?: CustomTable;
   callout?: Callout;
+  source?: string;
 }
 
 export interface MentionedAsset {
