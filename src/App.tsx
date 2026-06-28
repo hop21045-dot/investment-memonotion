@@ -6,7 +6,7 @@ import MemoDetail from "./components/MemoDetail";
 import MemoEditor from "./components/MemoEditor";
 import ProcessWorkflow from "./components/ProcessWorkflow";
 import { Sparkles, Layers, BookOpen, ChevronLeft, Video, MessageSquare, FileText, ClipboardList, RefreshCw, Download } from "lucide-react";
-import { getReportsFromFirestore, saveReportToFirestore, deleteReportFromFirestore } from "./firebase";
+import { getReportsFromFirestore, saveReportToFirestore, deleteReportFromFirestore, subscribeReports } from "./firebase";
 
 export default function App() {
   const [reports, setReports] = useState<StructuredReport[]>([]);
@@ -28,90 +28,9 @@ export default function App() {
     setIsMobileListVisible(true);
   };
 
-  // Sync data function
-  const syncData = async (localReports: StructuredReport[]) => {
-    setIsSyncing(true);
-    setSyncError(null);
-    try {
-      const dbReports = await getReportsFromFirestore();
-      setCloudConnected(true);
-
-      let finalReports: StructuredReport[] = [];
-
-      if (dbReports.length === 0) {
-        if (localReports.length > 0) {
-          // Local has data, cloud is empty: Sync local to cloud
-          for (const report of localReports) {
-            await saveReportToFirestore(report);
-          }
-          finalReports = localReports;
-        } else {
-          // Both empty: Sync sample reports to cloud and local
-          for (const report of SAMPLE_REPORTS) {
-            await saveReportToFirestore(report);
-          }
-          finalReports = SAMPLE_REPORTS;
-        }
-      } else {
-        // Cloud has data. Merge bidirectionally using updatedAt (last-write-wins).
-        const mergedMap = new Map<string, StructuredReport>();
-        
-        const isNewer = (a: StructuredReport, b: StructuredReport) => {
-          const timeA = a.updatedAt || 0;
-          const timeB = b.updatedAt || 0;
-          return timeA > timeB;
-        };
-
-        // Seed with database reports first
-        dbReports.forEach(r => mergedMap.set(r.id, r));
-
-        // Merge local reports: if newer or not present, overwrite and upload to cloud
-        for (const r of localReports) {
-          const existing = mergedMap.get(r.id);
-          if (!existing) {
-            mergedMap.set(r.id, r);
-            await saveReportToFirestore(r);
-          } else if (isNewer(r, existing)) {
-            mergedMap.set(r.id, r);
-            await saveReportToFirestore(r);
-          }
-        }
-
-        finalReports = Array.from(mergedMap.values());
-      }
-
-      setReports(finalReports);
-      localStorage.setItem("insight_memos", JSON.stringify(finalReports));
-      
-      // Select first report if none selected
-      if (finalReports.length > 0) {
-        setSelectedReportId(prev => {
-          if (prev && finalReports.some(r => r.id === prev)) {
-            return prev;
-          }
-          return finalReports[0].id;
-        });
-      }
-    } catch (error) {
-      console.error("Sync error:", error);
-      setCloudConnected(false);
-      setSyncError(error instanceof Error ? error.message : "동기화 오류");
-      
-      // Fallback to local
-      if (localReports.length > 0) {
-        setReports(localReports);
-        setSelectedReportId(prev => prev || localReports[0].id);
-      } else {
-        setReports(SAMPLE_REPORTS);
-        setSelectedReportId(prev => prev || SAMPLE_REPORTS[0].id);
-      }
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Load initial reports from localStorage and initiate cloud sync
+  // Initialize and subscribe to real-time updates from Firestore
   useEffect(() => {
+    // 1. Load initial cache from localStorage immediately so the UI is responsive
     let initialLocal: StructuredReport[] = [];
     const saved = localStorage.getItem("insight_memos");
     if (saved) {
@@ -131,24 +50,69 @@ export default function App() {
       }
     }
 
-    // Trigger Firestore Sync
-    syncData(initialLocal);
+    // 2. Set up Firestore synchronization and real-time subscription
+    let unsubscribe: (() => void) | null = null;
+
+    const setupSync = async () => {
+      setIsSyncing(true);
+      try {
+        const dbReports = await getReportsFromFirestore();
+        setCloudConnected(true);
+
+        // If the database is empty but we have local or sample data, populate it once
+        if (dbReports.length === 0) {
+          const toUpload = initialLocal.length > 0 ? initialLocal : SAMPLE_REPORTS;
+          for (const report of toUpload) {
+            await saveReportToFirestore(report);
+          }
+        }
+
+        // Subscribe to real-time database modifications
+        unsubscribe = subscribeReports(
+          (updatedDbReports) => {
+            setCloudConnected(true);
+            setSyncError(null);
+            setIsSyncing(false);
+            
+            if (updatedDbReports.length > 0) {
+              setReports(updatedDbReports);
+              localStorage.setItem("insight_memos", JSON.stringify(updatedDbReports));
+              setSelectedReportId((prev) => {
+                if (prev && updatedDbReports.some((r) => r.id === prev)) {
+                  return prev;
+                }
+                return updatedDbReports[0].id;
+              });
+            } else {
+              setReports([]);
+              localStorage.setItem("insight_memos", JSON.stringify([]));
+              setSelectedReportId(null);
+            }
+          },
+          (err) => {
+            console.error("Real-time subscription error:", err);
+            setSyncError(err.message);
+            setIsSyncing(false);
+          }
+        );
+      } catch (error) {
+        console.error("Initial Firestore sync setup error:", error);
+        setCloudConnected(false);
+        setSyncError(error instanceof Error ? error.message : "동기화 연결 실패");
+        setIsSyncing(false);
+      }
+    };
+
+    setupSync();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  const triggerManualSync = () => {
-    const saved = localStorage.getItem("insight_memos");
-    let currentLocal: StructuredReport[] = [];
-    if (saved) {
-      try {
-        currentLocal = JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    syncData(currentLocal);
-  };
-
-  const forcePullFromCloud = async () => {
+  const triggerManualSync = async () => {
     setIsSyncing(true);
     setSyncError(null);
     try {
@@ -157,19 +121,24 @@ export default function App() {
       if (dbReports.length > 0) {
         setReports(dbReports);
         localStorage.setItem("insight_memos", JSON.stringify(dbReports));
-        setSelectedReportId(dbReports[0].id);
-      } else {
-        setReports(SAMPLE_REPORTS);
-        localStorage.setItem("insight_memos", JSON.stringify(SAMPLE_REPORTS));
-        setSelectedReportId(SAMPLE_REPORTS[0].id);
+        setSelectedReportId((prev) => {
+          if (prev && dbReports.some((r) => r.id === prev)) {
+            return prev;
+          }
+          return dbReports[0].id;
+        });
       }
     } catch (error) {
-      console.error("Force pull error:", error);
+      console.error("Manual sync error:", error);
       setCloudConnected(false);
-      setSyncError(error instanceof Error ? error.message : "동기화 오류");
+      setSyncError(error instanceof Error ? error.message : "동기화 실패");
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const forcePullFromCloud = async () => {
+    await triggerManualSync();
   };
 
   // Save to localStorage whenever reports state changes

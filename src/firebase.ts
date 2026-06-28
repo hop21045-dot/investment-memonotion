@@ -6,7 +6,8 @@ import {
   setDoc, 
   doc, 
   deleteDoc,
-  getDocFromServer
+  getDocFromServer,
+  onSnapshot
 } from "firebase/firestore";
 import { StructuredReport } from "./types";
 
@@ -119,4 +120,26 @@ export async function validateConnection(): Promise<boolean> {
     console.warn("Firestore connection check info:", error);
     return false;
   }
+}
+
+// Subscribe to real-time updates from Firestore
+export function subscribeReports(
+  onUpdate: (reports: StructuredReport[]) => void,
+  onError: (err: Error) => void
+) {
+  return onSnapshot(
+    collection(db, "reports"),
+    (querySnapshot) => {
+      const reports: StructuredReport[] = [];
+      querySnapshot.forEach((docSnap) => {
+        reports.push(deserializeReportFromFirestore(docSnap.data()));
+      });
+      // Sort reports by updatedAt descending
+      reports.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      onUpdate(reports);
+    },
+    (error) => {
+      onError(error);
+    }
+  );
 }
