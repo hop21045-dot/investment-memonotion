@@ -29,15 +29,52 @@ export async function getReportsFromFirestore(): Promise<StructuredReport[]> {
   const querySnapshot = await getDocs(collection(db, "reports"));
   const reports: StructuredReport[] = [];
   querySnapshot.forEach((docSnap) => {
-    reports.push(docSnap.data() as StructuredReport);
+    const data = docSnap.data();
+    reports.push(deserializeReportFromFirestore(data));
   });
   return reports;
+}
+
+// Helper to serialize nested arrays for Firestore (nested arrays are not supported natively)
+function serializeReportForFirestore(report: StructuredReport): any {
+  const serialized = JSON.parse(JSON.stringify(report));
+  if (serialized.sections && Array.isArray(serialized.sections)) {
+    serialized.sections = serialized.sections.map((section: any) => {
+      if (section.table && section.table.rows) {
+        section.table.rowsJson = JSON.stringify(section.table.rows);
+        delete section.table.rows;
+      }
+      return section;
+    });
+  }
+  return serialized;
+}
+
+// Helper to deserialize nested arrays back from Firestore
+function deserializeReportFromFirestore(data: any): StructuredReport {
+  const deserialized = { ...data };
+  if (deserialized.sections && Array.isArray(deserialized.sections)) {
+    deserialized.sections = deserialized.sections.map((section: any) => {
+      if (section.table && section.table.rowsJson) {
+        try {
+          section.table.rows = JSON.parse(section.table.rowsJson);
+          delete section.table.rowsJson;
+        } catch (e) {
+          console.error("Failed to parse table rows JSON", e);
+          section.table.rows = [];
+        }
+      }
+      return section;
+    });
+  }
+  return deserialized as StructuredReport;
 }
 
 // Save/Update report to Firestore
 export async function saveReportToFirestore(report: StructuredReport): Promise<void> {
   const docRef = doc(db, "reports", report.id);
-  await setDoc(docRef, report, { merge: true });
+  const serialized = serializeReportForFirestore(report);
+  await setDoc(docRef, serialized, { merge: true });
 }
 
 // Delete report from Firestore
