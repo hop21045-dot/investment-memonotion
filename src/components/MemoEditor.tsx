@@ -18,82 +18,167 @@ import {
   FileCode
 } from "lucide-react";
 
-const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이지 글 등 다양한 원문 콘텐츠를 분석하여 최고의 '노션 스타일 구조화 메모'를 만들어 주는 투자 및 자료 리포팅 전문가입니다.
+const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이지 글, 증권사 리포트, 텔레그램 글 등 다양한 원문 콘텐츠를 분석하여 최고의 '노션 스타일 구조화 메모'를 만들어 주는 투자 및 자료 리포팅 전문가입니다.
 
-입력된 원문을 심도 있게 분석하여 다음 JSON 스키마를 만족하는 정확한 JSON 코드를 생성해 주세요. 부연 설명이나 다른 말은 일절 하지 말고, 오직 마크다운 코드 블록(\`\`\`json ... \`\`\`) 안에 담긴 JSON 결과물만 반환하세요.
+입력된 원문을 심도 있게 분석하여 아래 JSON 스키마를 만족하는 정확한 JSON 코드를 생성해 주세요.
 
-[JSON 스키마 규격]
+부연 설명이나 다른 말은 일절 하지 말고, 오직 마크다운 코드 블록(\`\`\`json ... \`\`\`) 안에 담긴 JSON 결과물만 반환하세요.
+
+[작성 원칙]
+
+1. 모든 텍스트는 한국어로 작성합니다.
+2. 원문에 없는 내용은 추정하지 않습니다.
+3. 추정이 필요한 경우 반드시 "추정" 또는 "확인 필요"라고 표시합니다.
+4. 최종 출력 JSON에는 주석을 절대 포함하지 않습니다.
+5. 각 섹션은 가능하면 "핵심 내용 → 세부내용 → 강세 논거 → 리스크 요인 → 핵심변수" 순서로 구조화합니다.
+6. 원문에 근거가 부족한 항목은 억지로 만들지 말고 빈 배열([]) 또는 빈 문자열("")로 둡니다.
+7. 표가 필요한 데이터는 반드시 "table" 필드에 넣고, content나 details 안에 마크다운 표를 직접 작성하지 않습니다.
+8. 단순 요약이 아니라 투자 판단에 필요한 인과관계, 핵심 변수, 리스크를 함께 정리합니다.
+9. 강세 논거는 단순한 긍정 요인이 아니라 주가, 실적, 밸류에이션, 수급에 긍정적인 영향을 줄 수 있는 구체적 근거로 작성합니다.
+10. 리스크 요인은 투자 아이디어가 틀릴 수 있는 조건, 반대 시나리오, 과도한 기대가 꺾일 수 있는 요인을 중심으로 작성합니다.
+11. 핵심변수는 앞으로 추적해야 할 숫자, 이벤트, 지표 중심으로 작성합니다.
+
+[JSON 스키마]
+
 {
-  "title": "노션 스타일의 직관적이고 눈길을 끄는 메모 제목 옆에 괄호로 '(☆)'를 추가하여 작성하십시오. 여기서 '☆'는 원문의 출처(증권사명, 유튜브 채널명/제목, 뉴스 출처 등)로 채워야 합니다. (예: '[테크] TV 디스플레이 시장 전망 및 기술 트렌드 (☆: 삼프로TV)' 또는 '[반도체] Rubin Ultra HBM4E 스펙 변화 가능성 (☆: 신한투자증권)')",
-  "category": "webpage", // 'youtube', 'telegram', 'report', 'webpage' 중 원문에 가장 알맞은 카테고리 기입
-  "sectors": ["AI", "반도체"], // 관련 있는 주요 투자 섹터/업종 태그들 기입 (예: 'AI', '반도체', '이차전지', '바이오', '매크로' 등 자유롭게 지정)
-  "sourceUrl": "https://example.com/source (알 수 있는 경우 출처 URL, 모르면 빈 문자열)",
-  "summary": "핵심 내용을 요약한 2~3줄 분량의 깔끔한 개요. **중요한 투자 포인트와 산업적 의미**가 드러나도록 작성합니다. (Markdown 볼드체나 서식을 적절히 가미하여 노션처럼 깔끔하게 작성)",
-  "keyPoints": [
-    "핵심 요약 내용 첫 번째 줄",
-    "핵심 요약 내용 두 번째 줄",
-    "핵심 요약 내용 세 번째 줄 (필요에 따라 더 늘리거나 3줄 정도로 제한)"
-  ],
+  "title": "노션 스타일의 직관적이고 눈길을 끄는 메모 제목 옆에 괄호로 '(☆: 출처명)'을 추가",
+  "category": "youtube | telegram | report | webpage",
+  "sectors": [],
+  "sourceUrl": "",
+  "date": "",
+  "sourceName": "",
+  "summary": "",
+  "keyPoints": [],
+  "coreSummary": {
+    "thesis": "",
+    "details": []
+  },
   "sections": [
     {
-      "title": "01 | [핵심 주제 1] 가독성을 높인 대제목",
-      "content": "이 섹션의 상세 분석 내용. 줄바꿈과 마크다운 서식을 사용하여 구조화하여 작성하되, 마크다운 표는 절대 직접 작성하지 않습니다.",
+      "title": "01 | [핵심 주제] 가독성을 높인 대제목",
+      "summary": "",
+      "details": [],
+      "bullArguments": [],
+      "riskFactors": [],
+      "keyVariables": [],
       "quote": {
-        "text": "본문에서 가장 핵심이 되는 중요한 인용구 또는 인상 깊은 강조 문장 (선택사항, 없으면 빈 문자열)",
-        "author": "말한 사람 또는 기관 (선택사항, 없으면 빈 문자열)"
+        "text": "",
+        "author": ""
       },
       "table": {
-        "headers": ["구분", "내용 1", "내용 2"],
-        "rows": [
-          ["행 1 열 1", "행 1 열 2", "행 1 열 3"],
-          ["행 2 열 1", "행 2 열 2", "행 2 열 3"]
-        ]
+        "headers": [],
+        "rows": []
       },
       "callout": {
-        "type": "warning", // 'warning', 'info', 'idea' 중 내용에 어울리는 타입 선택
-        "text": "노션 스타일의 콜아웃 박스에 들어갈 중요 체크포인트 및 알림 내용"
+        "type": "info | warning | idea | none",
+        "text": ""
       },
-      "source": "이 섹션 분석 내용의 구체적 출처 정보 (예: '유튜브 04:12경', '보고서 12페이지', '텔레그램 포스트 @채널명' 등. 구체적인 타임스탬프, 페이지, 채널명 또는 발언처를 간단히 한글로 기입, 없으면 빈 문자열)"
+      "source": ""
     }
   ],
   "investmentView": {
     "mentionedAssets": [
       {
-        "asset": "예시 자산 또는 관련 종목/기업명 (예: 삼성전자 (005930))",
-        "relation": "수혜주 / 핵심 공급사 / 경쟁사 등 관계 서술",
-        "context": "어떤 연관성이나 호재가 있는지 구체적인 문맥 설명"
+        "asset": "",
+        "relation": "",
+        "context": ""
       }
     ],
-    "bullArguments": [
-      "긍정적 요인 (호재, 성장성 등. 구체적인 논리와 근거 필수 포함)"
-    ],
-    "caveats": [
-      "주의해야 할 리스크 및 우려 요인 (구체적인 우려 논리와 수치/배경 근거 필수 포함)"
-    ],
-    "neutralEvaluation": "전체 내용을 냉철하게 종합한 최종 중립적 평가 및 향후 전망 예측"
+    "bullArguments": [],
+    "caveats": [],
+    "keyTrackingVariables": [],
+    "neutralEvaluation": ""
   },
-  "verification": "X", // 검증 여부 (기본값 'X')
-  "importance": 3, // 중요도 점수 (1~5 정수)
-  "status": "요약완료", // 상태값 (예: '요약완료', '정독필요', '검증중', '검증완료', 'Wiki반영')
-  "action": "" // 조치 사항 (공란 또는 'Wiki 반영 후보' 등 자유 서술)
+  "checklist": [],
+  "oneLineConclusion": "",
+  "verification": "X",
+  "importance": 3,
+  "importanceLabel": "medium",
+  "status": "요약완료",
+  "action": ""
 }
 
-★ [구조화 방식 취사선택 가이드]:
-1. 줄글(content) vs 표(table)의 영리한 선택:
-   - 배경 맥락, 인과 관계, 정성적인 분석이나 스토리라인은 줄바꿈과 볼드체(**) 등 마크다운 서식을 활용해 'content' 필드에 깔끔한 가독성을 갖춘 줄글로 표현하세요.
-   - 숫자 데이터, 재무 지표(매출, 영업이익, PER, PBR), 경쟁사 스펙 비교, 체크리스트, 또는 여러 행과 열로 정형화할 수 있는 수치/비교 정보는 반드시 'table' 필드에 완벽히 분리하여 입력하세요.
-   - 만약 해당 섹션에 테이블로 정형화할 만한 데이터가 없다면, table 객체의 headers와 rows를 빈 배열(예: "headers": [], "rows": [])로 비워두어야 합니다. 억지로 무의미한 표를 만들지 마세요.
+[핵심정리 작성 방식]
 
-★ [투자 포인트 및 리스크 분석 구체화 지침 (근거/이유 필수 포함)]:
-1. 'bullArguments'(긍정적 투자 포인트)와 'caveats'(우려되는 리스크 요인)를 작성할 때 단순한 사실의 한 줄 나열(예: 'AI 반도체 수요 급증' 또는 '경쟁 심화 우려')은 금지합니다.
-2. 각 항목마다 **"무엇이, 왜 그러한지, 그리고 그것의 원천적/객관적 근거 및 파급 효과"**가 구체적으로 포함된 밀도 높은 문장으로 기술하십시오.
-   - 예시 (올바른 bullArguments): "HBM3E 차세대 칩 공급 계약 체결: 엔비디아의 차세대 GPU 칩셋에 탑재될 독점 공급 계약을 성공적으로 수주하며 2026년 하반기 실적 가시성이 40% 이상 개선되었고, 이에 따른 확실한 캐시카우 확보 및 기술적 선점 효과가 기대됨."
-   - 예시 (올바른 caveats): "중국 로컬 업체의 저가 물량 공세 리스크: 중국 내 디스플레이 패널 경쟁사들이 보조금을 받아 양산하는 LCD 단가 인하 경쟁을 전방위적으로 벌이고 있어, 단기 마진 스프레드가 최소 15% 이상 훼손될 가능성이 상존함."
+"coreSummary.thesis"에는 원문의 핵심 결론과 투자적 의미를 2~4문장으로 압축합니다.
 
-★ [초정밀 주의사항 및 금지령]:
-1. 절대 금지: 각 section의 'content' 문자열 안에 마크다운 표(|---|---|)를 직접 텍스트로 그리지 마십시오. 표 형태가 필요한 모든 자료는 반드시 해당 섹션의 'table' 객체(headers, rows) 필드에 할당하여 완벽히 분리하셔야 합니다.
-2. 'content'에는 순수 줄글 설명만 작성하고, 표 데이터는 'table' 필드에 완벽하게 정형화하여 넣어주세요.
-3. 모든 텍스트는 한국어로 전문적이고 신뢰감 있는 톤앤매너를 유지하세요.`;
+"coreSummary.details"에는 원문에서 확인되는 주요 수치, 발언, 산업 변화, 기업별 포인트를 bullet 배열로 정리합니다.
+
+예시:
+{
+  "coreSummary": {
+    "thesis": "물가 정점 확산과 미국 장기금리 하방 경직이 동시에 나타나며, 단기적으로 위험자산에 우호적인 환경이 형성되고 있다. 다만 미국 재정적자와 국채 수요 이탈이 장기금리의 구조적 하락을 제한하고 있어, 단순한 금리 하락 베팅보다는 변동성 관리가 중요하다.",
+    "details": [
+      "유가가 70달러대로 복귀하며 5월 물가 정점 시각에 힘을 보태고 있다.",
+      "미국채 2년물과 10년물이 일주일 내내 하락하며 단기적으로 금리 부담은 완화됐다.",
+      "다만 미국 재정 확대와 국채 매수세 이탈은 장기금리의 구조적 하방을 제한하는 변수다."
+    ]
+  }
+}
+
+[섹션 작성 방식]
+
+각 section은 다음 구조를 따릅니다.
+
+1. "summary": 해당 섹션의 핵심 내용을 2~4문장으로 정리
+2. "details": 원문 기반 세부내용을 bullet 배열로 정리
+3. "bullArguments": 강세 논거를 구체적 근거와 함께 작성
+4. "riskFactors": 반대 논리와 주의할 리스크를 작성
+5. "keyVariables": 앞으로 추적해야 할 핵심 지표와 이벤트 작성
+
+단, 원문에 명확한 근거가 없는 항목은 억지로 만들지 말고 빈 배열([])로 둡니다.
+
+[표 작성 방식]
+
+숫자 데이터, 재무 지표, 경쟁사 비교, 밸류에이션 비교, 체크리스트처럼 행과 열로 정리할 수 있는 자료는 반드시 "table" 필드에 넣습니다.
+
+표로 만들 데이터가 없으면 다음처럼 비워둡니다.
+
+{
+  "headers": [],
+  "rows": []
+}
+
+content나 details 안에 마크다운 표(|---|---|)를 직접 작성하지 않습니다.
+
+[투자 관점 작성 방식]
+
+"investmentView"는 전체 콘텐츠를 종합한 투자 판단입니다.
+
+"mentionedAssets"에는 원문에서 직접 언급된 종목, 기업, 자산, 섹터를 정리합니다.
+
+"bullArguments"에는 콘텐츠 전체 기준의 강세 논거를 작성합니다.
+
+"caveats"에는 콘텐츠 전체 기준의 주의 및 반론을 작성합니다.
+
+"keyTrackingVariables"에는 향후 추적해야 할 핵심 지표를 작성합니다.
+
+"neutralEvaluation"에는 감정적 결론이 아니라, 강세 논리와 리스크를 함께 고려한 중립적 평가를 작성합니다.
+
+[중요도 기준]
+
+"importance"는 1~5 정수로 작성합니다.
+
+1 = 단순 참고
+2 = 관심 섹터 참고자료
+3 = 투자 아이디어 후보
+4 = 중요 추적 필요
+5 = 핵심 투자 thesis 또는 Wiki 반영 후보
+
+"importanceLabel"은 다음 중 하나로 작성합니다.
+
+1~2 = low
+3 = medium
+4~5 = high
+
+[금지사항]
+
+1. 최종 JSON에 주석을 넣지 마세요.
+2. 원문에 없는 수치를 만들어내지 마세요.
+3. 강세 논거와 리스크 요인을 단순 키워드로만 쓰지 마세요.
+4. 모든 내용을 content 하나에 몰아넣지 마세요.
+5. 표 데이터를 content 안에 마크다운 표로 직접 작성하지 마세요.
+6. 출처를 알 수 없는 경우에는 빈 문자열로 두세요.`;
 
 // Helper to extract table from text content if AI mistakenly embeds it as markdown table in text
 function extractTableFromContent(content: string): { cleanedContent: string; table: { headers: string[]; rows: string[][] } | null } {
@@ -372,22 +457,61 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setSourceUrl(data.sourceUrl);
         setSourceUrls(data.sourceUrl ? [data.sourceUrl] : [""]);
       }
-      if (data.summary) setSummary(data.summary);
+      
+      // Map coreSummary if present, else fallback to standard summary/keyPoints
+      if (data.coreSummary) {
+        if (data.coreSummary.thesis) {
+          setSummary(data.coreSummary.thesis);
+        } else if (data.summary) {
+          setSummary(data.summary);
+        }
+        if (data.coreSummary.details && Array.isArray(data.coreSummary.details)) {
+          const kp = data.coreSummary.details.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        } else if (data.keyPoints && Array.isArray(data.keyPoints)) {
+          const kp = data.keyPoints.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        }
+      } else {
+        if (data.summary) setSummary(data.summary);
+        if (data.keyPoints && Array.isArray(data.keyPoints)) {
+          const kp = data.keyPoints.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        }
+      }
+
       if (data.importance !== undefined) setImportance(Number(data.importance));
       const isVerified = data.verified !== undefined ? data.verified : data.verification;
       if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
       if (data.status !== undefined) setStatus(data.status);
       if (data.action !== undefined) setAction(data.action);
       
-      if (data.keyPoints && Array.isArray(data.keyPoints)) {
-        const kp = data.keyPoints.map((p: any) => String(p));
-        while (kp.length < 3) kp.push("");
-        setKeyPoints(kp);
-      }
-      
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
+          if (!sectionContent) {
+            const parts: string[] = [];
+            if (sec.summary) {
+              parts.push(`**섹션 요약**:\n${sec.summary}`);
+            }
+            if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
+              parts.push(`**상세 설명**:\n${sec.details.map((d: any) => `- ${d}`).join('\n')}`);
+            }
+            if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
+              parts.push(`**📈 강세 논거**:\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
+            }
+            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
+              parts.push(`**⚠️ 리스크 요인**:\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+            }
+            if (sec.keyVariables && Array.isArray(sec.keyVariables) && sec.keyVariables.length > 0) {
+              parts.push(`**🔄 핵심 변수**:\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
+            }
+            sectionContent = parts.join('\n\n');
+          }
+
           let parsedTable = sec.table ? {
             headers: Array.isArray(sec.table.headers) ? sec.table.headers : ["구분", "상세 내용"],
             rows: Array.isArray(sec.table.rows) ? sec.table.rows : [["", ""]]
@@ -433,12 +557,23 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
           setBullArguments(iv.bullArguments.map((b: any) => String(b)));
         }
+        
+        let caveatsList: string[] = [];
         if (iv.caveats && Array.isArray(iv.caveats)) {
-          setCaveats(iv.caveats.map((c: any) => String(c)));
+          caveatsList = iv.caveats.map((c: any) => String(c));
+        } else if (iv.riskFactors && Array.isArray(iv.riskFactors)) {
+          caveatsList = iv.riskFactors.map((r: any) => String(r));
         }
-        if (iv.neutralEvaluation) {
-          setNeutralEvaluation(iv.neutralEvaluation);
+        setCaveats(caveatsList);
+
+        let evaluationText = iv.neutralEvaluation || "";
+        if (data.oneLineConclusion) {
+          evaluationText += `\n\n📌 한줄 결론:\n${data.oneLineConclusion}`;
         }
+        if (data.checklist && Array.isArray(data.checklist) && data.checklist.length > 0) {
+          evaluationText += `\n\n✅ 체크리스트:\n${data.checklist.map((item: any) => `- ${item}`).join("\n")}`;
+        }
+        setNeutralEvaluation(evaluationText);
       }
 
       triggerToast("🎉 AI가 원문을 분석하여 노션 스타일 폼을 자동으로 완성했습니다! 아래 입력된 내용을 확인해 보세요.", "success");
@@ -493,24 +628,62 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setSourceUrl(data.sourceUrl);
         setSourceUrls(data.sourceUrl ? [data.sourceUrl] : [""]);
       }
-      if (data.summary) setSummary(data.summary);
+      
+      // Map coreSummary if present, else fallback to standard summary/keyPoints
+      if (data.coreSummary) {
+        if (data.coreSummary.thesis) {
+          setSummary(data.coreSummary.thesis);
+        } else if (data.summary) {
+          setSummary(data.summary);
+        }
+        if (data.coreSummary.details && Array.isArray(data.coreSummary.details)) {
+          const kp = data.coreSummary.details.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        } else if (data.keyPoints && Array.isArray(data.keyPoints)) {
+          const kp = data.keyPoints.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        }
+      } else {
+        if (data.summary) setSummary(data.summary);
+        if (data.keyPoints && Array.isArray(data.keyPoints)) {
+          const kp = data.keyPoints.map((p: any) => String(p));
+          while (kp.length < 3) kp.push("");
+          setKeyPoints(kp);
+        }
+      }
+
       if (data.importance !== undefined) setImportance(Number(data.importance));
       const isVerified = data.verified !== undefined ? data.verified : data.verification;
       if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
       if (data.status !== undefined) setStatus(data.status);
       if (data.action !== undefined) setAction(data.action);
       
-      if (data.keyPoints && Array.isArray(data.keyPoints)) {
-        // Ensure we always have at least 3 elements for the form to look nice
-        const kp = data.keyPoints.map((p: any) => String(p));
-        while (kp.length < 3) kp.push("");
-        setKeyPoints(kp);
-      }
-      
       // 4. Fill in sections
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
+          if (!sectionContent) {
+            const parts: string[] = [];
+            if (sec.summary) {
+              parts.push(`**섹션 요약**:\n${sec.summary}`);
+            }
+            if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
+              parts.push(`**상세 설명**:\n${sec.details.map((d: any) => `- ${d}`).join('\n')}`);
+            }
+            if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
+              parts.push(`**📈 강세 논거**:\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
+            }
+            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
+              parts.push(`**⚠️ 리스크 요인**:\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+            }
+            if (sec.keyVariables && Array.isArray(sec.keyVariables) && sec.keyVariables.length > 0) {
+              parts.push(`**🔄 핵심 변수**:\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
+            }
+            sectionContent = parts.join('\n\n');
+          }
+
           let parsedTable = sec.table ? {
             headers: Array.isArray(sec.table.headers) ? sec.table.headers : ["구분", "상세 내용"],
             rows: Array.isArray(sec.table.rows) ? sec.table.rows : [["", ""]]
@@ -557,12 +730,23 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
           setBullArguments(iv.bullArguments.map((b: any) => String(b)));
         }
+        
+        let caveatsList: string[] = [];
         if (iv.caveats && Array.isArray(iv.caveats)) {
-          setCaveats(iv.caveats.map((c: any) => String(c)));
+          caveatsList = iv.caveats.map((c: any) => String(c));
+        } else if (iv.riskFactors && Array.isArray(iv.riskFactors)) {
+          caveatsList = iv.riskFactors.map((r: any) => String(r));
         }
-        if (iv.neutralEvaluation) {
-          setNeutralEvaluation(iv.neutralEvaluation);
+        setCaveats(caveatsList);
+
+        let evaluationText = iv.neutralEvaluation || "";
+        if (data.oneLineConclusion) {
+          evaluationText += `\n\n📌 한줄 결론:\n${data.oneLineConclusion}`;
         }
+        if (data.checklist && Array.isArray(data.checklist) && data.checklist.length > 0) {
+          evaluationText += `\n\n✅ 체크리스트:\n${data.checklist.map((item: any) => `- ${item}`).join("\n")}`;
+        }
+        setNeutralEvaluation(evaluationText);
       }
 
       triggerToast("🎉 AI 분석 JSON 데이터가 성공적으로 폼에 자동 입력되었습니다! 아래 폼 필드들을 검토해 보시고 저장해 주세요.", "success");

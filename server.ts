@@ -62,7 +62,7 @@ ${text}
 
 Provide your response in JSON format matching this schema:
 {
-  "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji (e.g., 🎥 for YouTube video, 📢 for industry report, 💬 for Telegram post)",
+  "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji, followed by the source in parentheses '(☆: 출처명)' where '☆' is the name of the source, such as the brokerage company name, YouTube channel name/video title, news outlet, etc. (e.g., '🎥 [테크] TV 디스플레이 시장 전망 및 기술 트렌드 (☆: 삼프로TV)' or '📢 [반도체] Rubin Ultra HBM4E 스펙 변화 가능성 (☆: 신한투자증권)')",
   "date": "The date of the report or current date if not found (YYYY-MM-DD format)",
   "category": "One of 'youtube', 'telegram', or 'report'",
   "sourceUrl": "The URL of the source if mentioned, or empty string",
