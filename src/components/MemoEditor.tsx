@@ -492,24 +492,26 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
-          if (!sectionContent) {
+          if (!sectionContent || sec.summary || (sec.details && sec.details.length > 0)) {
             const parts: string[] = [];
             if (sec.summary) {
-              parts.push(`**섹션 요약**:\n${sec.summary}`);
+              parts.push(sec.summary);
             }
             if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
-              parts.push(`**상세 설명**:\n${sec.details.map((d: any) => `- ${d}`).join('\n')}`);
+              parts.push(sec.details.map((d: any) => `- ${d}`).join('\n'));
             }
             if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
-              parts.push(`**📈 강세 논거**:\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
-            }
-            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
-              parts.push(`**⚠️ 리스크 요인**:\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+              parts.push(`> ✅ 강세 논거\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
             }
             if (sec.keyVariables && Array.isArray(sec.keyVariables) && sec.keyVariables.length > 0) {
-              parts.push(`**🔄 핵심 변수**:\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
+              parts.push(`> ⚠️ 핵심 변수\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
             }
-            sectionContent = parts.join('\n\n');
+            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
+              parts.push(`> ❌ 리스크\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+            }
+            if (parts.length > 0) {
+              sectionContent = parts.join('\n\n');
+            }
           }
 
           let parsedTable = sec.table ? {
@@ -530,6 +532,11 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             id: sec.id || `sec-parsed-${idx}-${Date.now()}`,
             title: sec.title || `섹션 ${idx + 1}`,
             content: sectionContent,
+            summary: sec.summary || "",
+            details: Array.isArray(sec.details) ? sec.details.map((d: any) => String(d)) : [],
+            bullArguments: Array.isArray(sec.bullArguments) ? sec.bullArguments.map((b: any) => String(b)) : [],
+            riskFactors: Array.isArray(sec.riskFactors) ? sec.riskFactors.map((r: any) => String(r)) : [],
+            keyVariables: Array.isArray(sec.keyVariables) ? sec.keyVariables.map((v: any) => String(v)) : [],
             quote: sec.quote ? {
               text: sec.quote.text || "",
               author: sec.quote.author || ""
@@ -664,24 +671,26 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
-          if (!sectionContent) {
+          if (!sectionContent || sec.summary || (sec.details && sec.details.length > 0)) {
             const parts: string[] = [];
             if (sec.summary) {
-              parts.push(`**섹션 요약**:\n${sec.summary}`);
+              parts.push(sec.summary);
             }
             if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
-              parts.push(`**상세 설명**:\n${sec.details.map((d: any) => `- ${d}`).join('\n')}`);
+              parts.push(sec.details.map((d: any) => `- ${d}`).join('\n'));
             }
             if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
-              parts.push(`**📈 강세 논거**:\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
-            }
-            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
-              parts.push(`**⚠️ 리스크 요인**:\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+              parts.push(`> ✅ 강세 논거\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
             }
             if (sec.keyVariables && Array.isArray(sec.keyVariables) && sec.keyVariables.length > 0) {
-              parts.push(`**🔄 핵심 변수**:\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
+              parts.push(`> ⚠️ 핵심 변수\n${sec.keyVariables.map((v: any) => `- ${v}`).join('\n')}`);
             }
-            sectionContent = parts.join('\n\n');
+            if (sec.riskFactors && Array.isArray(sec.riskFactors) && sec.riskFactors.length > 0) {
+              parts.push(`> ❌ 리스크\n${sec.riskFactors.map((r: any) => `- ${r}`).join('\n')}`);
+            }
+            if (parts.length > 0) {
+              sectionContent = parts.join('\n\n');
+            }
           }
 
           let parsedTable = sec.table ? {
@@ -702,6 +711,11 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             id: sec.id || `sec-parsed-${idx}-${Date.now()}`,
             title: sec.title || `섹션 ${idx + 1}`,
             content: sectionContent,
+            summary: sec.summary || "",
+            details: Array.isArray(sec.details) ? sec.details.map((d: any) => String(d)) : [],
+            bullArguments: Array.isArray(sec.bullArguments) ? sec.bullArguments.map((b: any) => String(b)) : [],
+            riskFactors: Array.isArray(sec.riskFactors) ? sec.riskFactors.map((r: any) => String(r)) : [],
+            keyVariables: Array.isArray(sec.keyVariables) ? sec.keyVariables.map((v: any) => String(v)) : [],
             quote: sec.quote ? {
               text: sec.quote.text || "",
               author: sec.quote.author || ""

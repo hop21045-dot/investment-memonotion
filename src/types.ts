@@ -17,6 +17,11 @@ export interface Section {
   id: string;
   title: string;
   content: string;
+  summary?: string;
+  details?: string[];
+  bullArguments?: string[];
+  riskFactors?: string[];
+  keyVariables?: string[];
   quote?: Quote;
   table?: CustomTable;
   callout?: Callout;

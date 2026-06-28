@@ -682,19 +682,54 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
     } else if (report.sourceUrl) {
       md += `* **출처:** [링크](${report.sourceUrl})\n`;
     }
-    md += `\n## 📌 요약\n${report.summary}\n\n`;
-    
-    md += `## 🔑 핵심 정리\n`;
+    md += `\n## 핵심 정리\n\n`;
     report.keyPoints.forEach((p) => (md += `- ${p}\n`));
-    md += `\n`;
+    md += `\n---\n\n## 섹션 분석\n\n`;
 
-    report.sections.forEach((sec) => {
-      md += `## ${sec.title}${sec.source ? ` (출처: ${sec.source})` : ""}\n\n`;
-      md += `${sec.content}\n\n`;
-      if (sec.quote) {
+    report.sections.forEach((sec, sIdx) => {
+      md += `### ${String(sIdx + 1).padStart(2, "0")} | ${sec.title}${sec.source ? ` (출처: ${sec.source})` : ""}\n\n`;
+      
+      const hasStructuredFields = sec.summary || (sec.details && sec.details.length > 0) || (sec.bullArguments && sec.bullArguments.length > 0) || (sec.keyVariables && sec.keyVariables.length > 0) || (sec.riskFactors && sec.riskFactors.length > 0);
+      
+      if (hasStructuredFields) {
+        if (sec.summary) {
+          md += `${sec.summary}\n\n`;
+        }
+        if (sec.details && sec.details.length > 0) {
+          sec.details.forEach(d => {
+            md += `- ${d}\n`;
+          });
+          md += `\n`;
+        }
+        if (sec.bullArguments && sec.bullArguments.length > 0) {
+          md += `> ✅ 강세 논거\n`;
+          sec.bullArguments.forEach(b => {
+            md += `- ${b}\n`;
+          });
+          md += `\n`;
+        }
+        if (sec.keyVariables && sec.keyVariables.length > 0) {
+          md += `> ⚠️ 핵심 변수\n`;
+          sec.keyVariables.forEach(v => {
+            md += `- ${v}\n`;
+          });
+          md += `\n`;
+        }
+        if (sec.riskFactors && sec.riskFactors.length > 0) {
+          md += `> ❌ 리스크\n`;
+          sec.riskFactors.forEach(r => {
+            md += `- ${r}\n`;
+          });
+          md += `\n`;
+        }
+      } else {
+        md += `${sec.content}\n\n`;
+      }
+
+      if (sec.quote && sec.quote.text) {
         md += `> "${sec.quote.text}"\n> — *${sec.quote.author}*\n\n`;
       }
-      if (sec.table) {
+      if (sec.table && sec.table.headers && sec.table.headers.length > 0) {
         md += `| ${sec.table.headers.join(" | ")} |\n`;
         md += `| ${sec.table.headers.map(() => "---").join(" | ")} |\n`;
         sec.table.rows.forEach((row) => {
@@ -702,7 +737,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
         });
         md += `\n`;
       }
-      if (sec.callout) {
+      if (sec.callout && sec.callout.text) {
         const emoji =
           sec.callout.type === "warning"
             ? "⚠️"
@@ -1082,8 +1117,63 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
                     </span>
                   )}
                 </div>
-                <div className="markdown-body prose max-w-none text-sm text-slate-750 leading-relaxed text-justify space-y-1">
-                  <ReactMarkdown>{sec.content}</ReactMarkdown>
+                <div className="markdown-body prose max-w-none text-sm text-slate-750 leading-relaxed text-justify space-y-4">
+                  {(sec.summary || (sec.details && sec.details.length > 0) || (sec.bullArguments && sec.bullArguments.length > 0) || (sec.keyVariables && sec.keyVariables.length > 0) || (sec.riskFactors && sec.riskFactors.length > 0)) ? (
+                    <div className="space-y-4">
+                      {sec.summary && (
+                        <p className="text-sm font-semibold text-gray-900 leading-relaxed">{sec.summary}</p>
+                      )}
+                      
+                      {sec.details && sec.details.length > 0 && (
+                        <ul className="list-disc pl-5 space-y-1">
+                          {sec.details.map((detail, dIdx) => (
+                            <li key={dIdx} className="text-gray-800 leading-relaxed">{detail}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {sec.bullArguments && sec.bullArguments.length > 0 && (
+                        <div className="bg-emerald-50/40 border-l-4 border-emerald-500 pl-4 py-2.5 my-3 rounded-r-lg">
+                          <span className="font-bold text-emerald-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
+                            ✅ 강세 논거
+                          </span>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {sec.bullArguments.map((b, bIdx) => (
+                              <li key={bIdx} className="text-emerald-950 text-sm leading-relaxed">{b}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {sec.keyVariables && sec.keyVariables.length > 0 && (
+                        <div className="bg-amber-50/40 border-l-4 border-amber-500 pl-4 py-2.5 my-3 rounded-r-lg">
+                          <span className="font-bold text-amber-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
+                            ⚠️ 핵심 변수
+                          </span>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {sec.keyVariables.map((v, vIdx) => (
+                              <li key={vIdx} className="text-amber-950 text-sm leading-relaxed">{v}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {sec.riskFactors && sec.riskFactors.length > 0 && (
+                        <div className="bg-rose-50/40 border-l-4 border-rose-500 pl-4 py-2.5 my-3 rounded-r-lg">
+                          <span className="font-bold text-rose-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
+                            ❌ 리스크
+                          </span>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {sec.riskFactors.map((r, rIdx) => (
+                              <li key={rIdx} className="text-rose-950 text-sm leading-relaxed">{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <ReactMarkdown>{sec.content}</ReactMarkdown>
+                  )}
                 </div>
 
                 {/* Optional Quote */}

@@ -79,7 +79,21 @@ Provide your response in JSON format matching this schema:
   "sections": [
     {
       "title": "01 | [Thematic Topic] Section title",
-      "content": "Deep section narrative/analysis in Korean describing details and dynamics",
+      "summary": "Core summary of this section in 2-3 sentences",
+      "details": [
+        "Detail point 1",
+        "Detail point 2"
+      ],
+      "bullArguments": [
+        "Bull argument or positive factors for this section 1",
+        "Bull argument or positive factors for this section 2"
+      ],
+      "riskFactors": [
+        "Risk factors or warning indicators for this section 1"
+      ],
+      "keyVariables": [
+        "Key monitoring tracking variables or milestones for this section 1"
+      ],
       "quote": {
         "text": "An impactful direct or summarized quote from the speaker/author, if any",
         "author": "The name of the speaker or author of the quote"
@@ -142,14 +156,31 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
             verified: { type: Type.STRING, enum: ["O", "X"] },
             status: { type: Type.STRING, enum: ["요약완료", "정독필요", "검증중", "검증완료", "Wiki반영"] },
             action: { type: Type.STRING, enum: ["1차 요약 필요", "원문 정독", "원문 검증 필요", "ChatGPT 검증 대기", "Wiki 반영 후보", "Wiki 반영 필요", "트래커 업데이트 필요", "보류", "폐기", ""] },
-            sections: {
+             sections: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
-                required: ["title", "content"],
+                required: ["title"],
                 properties: {
                   title: { type: Type.STRING },
                   content: { type: Type.STRING },
+                  summary: { type: Type.STRING },
+                  details: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  bullArguments: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  riskFactors: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  keyVariables: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
                   quote: {
                     type: Type.OBJECT,
                     required: ["text", "author"],
