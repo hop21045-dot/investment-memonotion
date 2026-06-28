@@ -5,7 +5,7 @@ import MemoList from "./components/MemoList";
 import MemoDetail from "./components/MemoDetail";
 import MemoEditor from "./components/MemoEditor";
 import ProcessWorkflow from "./components/ProcessWorkflow";
-import { Sparkles, Layers, BookOpen, ChevronLeft, Video, MessageSquare, FileText, ClipboardList, RefreshCw } from "lucide-react";
+import { Sparkles, Layers, BookOpen, ChevronLeft, Video, MessageSquare, FileText, ClipboardList, RefreshCw, Download } from "lucide-react";
 import { getReportsFromFirestore, saveReportToFirestore, deleteReportFromFirestore } from "./firebase";
 
 export default function App() {
@@ -148,6 +148,30 @@ export default function App() {
     syncData(currentLocal);
   };
 
+  const forcePullFromCloud = async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      const dbReports = await getReportsFromFirestore();
+      setCloudConnected(true);
+      if (dbReports.length > 0) {
+        setReports(dbReports);
+        localStorage.setItem("insight_memos", JSON.stringify(dbReports));
+        setSelectedReportId(dbReports[0].id);
+      } else {
+        setReports(SAMPLE_REPORTS);
+        localStorage.setItem("insight_memos", JSON.stringify(SAMPLE_REPORTS));
+        setSelectedReportId(SAMPLE_REPORTS[0].id);
+      }
+    } catch (error) {
+      console.error("Force pull error:", error);
+      setCloudConnected(false);
+      setSyncError(error instanceof Error ? error.message : "동기화 오류");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Save to localStorage whenever reports state changes
   const saveReports = (updatedReports: StructuredReport[]) => {
     setReports(updatedReports);
@@ -249,19 +273,19 @@ export default function App() {
         </div>
 
         {/* Cloud Synchronization Status Indicator */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap" id="cloud-sync-indicators">
           {isSyncing ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-indigo-100 bg-indigo-50/70 text-indigo-700 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-indigo-100 bg-indigo-50/70 text-indigo-700 text-[11px] font-bold" id="syncing-indicator">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
               동기화 진행 중...
             </div>
           ) : cloudConnected ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-100 bg-emerald-50/70 text-emerald-700 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-100 bg-emerald-50/70 text-emerald-700 text-[11px] font-bold" id="connected-indicator">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
               클라우드 동기화 완료
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-100 bg-amber-50/70 text-amber-700 text-[11px] font-bold" title={syncError || "클라우드 데이터베이스에 연결할 수 없습니다."}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-100 bg-amber-50/70 text-amber-700 text-[11px] font-bold" title={syncError || "클라우드 데이터베이스에 연결할 수 없습니다."} id="local-mode-indicator">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
               로컬 저장 모드
             </div>
@@ -272,9 +296,21 @@ export default function App() {
             disabled={isSyncing}
             className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-[11px] text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200/80 font-bold transition-all cursor-pointer disabled:opacity-50"
             title="실시간 클라우드 데이터 새로고침 및 동기화"
+            id="manual-sync-button"
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>동기화</span>
+          </button>
+
+          <button
+            onClick={forcePullFromCloud}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-[11px] text-indigo-700 px-2.5 py-1.5 rounded-lg border border-indigo-200/80 font-bold transition-all cursor-pointer disabled:opacity-50"
+            title="클라우드 데이터를 기기로 강제 덮어쓰기 (모바일-노트북 연동 보장)"
+            id="force-sync-button"
+          >
+            <Download className="w-3 h-3" />
+            <span>클라우드 강제덮어쓰기</span>
           </button>
         </div>
 

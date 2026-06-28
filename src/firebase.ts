@@ -35,11 +35,37 @@ export async function getReportsFromFirestore(): Promise<StructuredReport[]> {
   return reports;
 }
 
+// Helper to recursively strip out any nested arrays from any object/array before writing to Firestore
+function recursivelySanitize(val: any): any {
+  if (val === null || val === undefined) return val;
+  
+  if (Array.isArray(val)) {
+    return val.map((item) => {
+      if (Array.isArray(item)) {
+        // Nested array found! Firestore doesn't support this. Convert to JSON string so it is flat.
+        return JSON.stringify(item);
+      }
+      return recursivelySanitize(item);
+    });
+  }
+  
+  if (typeof val === "object") {
+    const cleaned: any = {};
+    for (const key of Object.keys(val)) {
+      cleaned[key] = recursivelySanitize(val[key]);
+    }
+    return cleaned;
+  }
+  
+  return val;
+}
+
 // Helper to serialize nested arrays for Firestore (nested arrays are not supported natively)
 function serializeReportForFirestore(report: StructuredReport): any {
   const serialized = JSON.parse(JSON.stringify(report));
   if (serialized.sections && Array.isArray(serialized.sections)) {
     serialized.sections = serialized.sections.map((section: any) => {
+      if (!section) return { id: `sec-fallback-${Date.now()}`, title: "Untitled Section", content: "" };
       if (section.table && section.table.rows) {
         section.table.rowsJson = JSON.stringify(section.table.rows);
         delete section.table.rows;
@@ -47,7 +73,7 @@ function serializeReportForFirestore(report: StructuredReport): any {
       return section;
     });
   }
-  return serialized;
+  return recursivelySanitize(serialized);
 }
 
 // Helper to deserialize nested arrays back from Firestore
@@ -55,6 +81,7 @@ function deserializeReportFromFirestore(data: any): StructuredReport {
   const deserialized = { ...data };
   if (deserialized.sections && Array.isArray(deserialized.sections)) {
     deserialized.sections = deserialized.sections.map((section: any) => {
+      if (!section) return { id: `sec-fallback-${Date.now()}`, title: "Untitled Section", content: "" };
       if (section.table && section.table.rowsJson) {
         try {
           section.table.rows = JSON.parse(section.table.rowsJson);
