@@ -1,6 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { StructuredReport } from "../types";
-import { Search, Plus, Video, MessageSquare, FileText, Sparkles, TrendingUp, Globe } from "lucide-react";
+import { 
+  Search, 
+  Plus, 
+  Video, 
+  MessageSquare, 
+  FileText, 
+  Sparkles, 
+  TrendingUp, 
+  Globe,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
+  Star
+} from "lucide-react";
 
 interface MemoListProps {
   reports: StructuredReport[];
@@ -24,10 +38,43 @@ export default function MemoList({
   setCategoryFilter,
 }: MemoListProps) {
 
+  // Multi-dimensional rating sort and filter state
+  const [sortBy, setSortBy] = useState<'date' | 'importance' | 'read_priority' | 'verification_need'>('date');
+  const [minImportance, setMinImportance] = useState<number>(0);
+  const [minReadPriority, setMinReadPriority] = useState<number>(0);
+  const [minVerificationNeed, setMinVerificationNeed] = useState<number>(0);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState<boolean>(false);
+
+  // Safe rating extractors (with fallback values for legacy data)
+  const getReportImportance = (report: StructuredReport) => {
+    return report.rating?.importance !== undefined ? report.rating.importance : (report.importance || 0);
+  };
+
+  const getReportReadPriority = (report: StructuredReport) => {
+    return report.rating?.read_priority !== undefined ? report.rating.read_priority : 3;
+  };
+
+  const getReportVerificationNeed = (report: StructuredReport) => {
+    return report.rating?.verification_need !== undefined ? report.rating.verification_need : (report.verified === "O" ? 4 : 2);
+  };
+
   const filteredReports = reports.filter((report) => {
     const query = search.trim();
     const matchesCategory =
       categoryFilter === "all" || report.category === categoryFilter;
+
+    // Rating filters
+    const imp = getReportImportance(report);
+    const readPri = getReportReadPriority(report);
+    const verNeed = getReportVerificationNeed(report);
+
+    const matchesImportance = minImportance === 0 || imp >= minImportance;
+    const matchesReadPriority = minReadPriority === 0 || readPri >= minReadPriority;
+    const matchesVerificationNeed = minVerificationNeed === 0 || verNeed >= minVerificationNeed;
+
+    if (!matchesImportance || !matchesReadPriority || !matchesVerificationNeed) {
+      return false;
+    }
 
     if (!query) return matchesCategory;
 
@@ -46,6 +93,24 @@ export default function MemoList({
       (report.rawText && report.rawText.toLowerCase().includes(query.toLowerCase()));
 
     return matchesSearch && matchesCategory;
+  });
+
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    if (sortBy === 'importance') {
+      const diff = getReportImportance(b) - getReportImportance(a);
+      if (diff !== 0) return diff;
+    } else if (sortBy === 'read_priority') {
+      const diff = getReportReadPriority(b) - getReportReadPriority(a);
+      if (diff !== 0) return diff;
+    } else if (sortBy === 'verification_need') {
+      const diff = getReportVerificationNeed(b) - getReportVerificationNeed(a);
+      if (diff !== 0) return diff;
+    }
+    
+    // Default fallback: date descending
+    const aDate = a.date || "";
+    const bDate = b.date || "";
+    return bDate.localeCompare(aDate);
   });
 
   const getCategoryIcon = (category: string) => {
@@ -237,33 +302,181 @@ export default function MemoList({
       </div>
 
       {/* Category Filter Tabs */}
-      <div className="px-4 py-2 border-b border-gray-200 flex gap-1 bg-gray-50/20" id="filter-tabs">
-        {["all", "youtube", "telegram", "report"].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategoryFilter(cat)}
-            className={`px-3 py-1.5 text-[11px] rounded-lg transition-all font-bold uppercase tracking-wider ${
-              categoryFilter === cat
-                ? "bg-black text-white"
-                : "text-gray-500 hover:text-black hover:bg-gray-150"
-            }`}
-          >
-            {cat === "all" ? "전체" : getCategoryLabel(cat)}
-          </button>
-        ))}
+      <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between bg-gray-50/20" id="filter-tabs">
+        <div className="flex gap-1">
+          {["all", "youtube", "telegram", "report"].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-3 py-1.5 text-[11px] rounded-lg transition-all font-bold uppercase tracking-wider ${
+                categoryFilter === cat
+                  ? "bg-black text-white"
+                  : "text-gray-500 hover:text-black hover:bg-gray-150"
+              }`}
+            >
+              {cat === "all" ? "전체" : getCategoryLabel(cat)}
+            </button>
+          ))}
+        </div>
+
+        {/* Sliders/Filter panel toggle */}
+        <button
+          onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+          className={`p-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold ${
+            isFilterPanelOpen || minImportance > 0 || minReadPriority > 0 || minVerificationNeed > 0 || sortBy !== 'date'
+              ? "bg-indigo-50 border-indigo-200 text-indigo-700 animate-pulse"
+              : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+          }`}
+          title="다차원 레이팅 필터 및 정렬 설정"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <span>필터 & 정렬</span>
+          {(minImportance > 0 || minReadPriority > 0 || minVerificationNeed > 0 || sortBy !== 'date') && (
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-650 inline-block"></span>
+          )}
+        </button>
       </div>
+
+      {/* Multi-Dimensional Rating Filter & Sorting Panel */}
+      {(isFilterPanelOpen || minImportance > 0 || minReadPriority > 0 || minVerificationNeed > 0 || sortBy !== 'date') && (
+        <div className="px-4 py-3 bg-indigo-50/30 border-b border-indigo-100/50 space-y-3" id="rating-filter-panel">
+          {/* Row 1: Sorting Select */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+              <ArrowUpDown className="w-3 h-3 text-indigo-500" />
+              <span>정렬 기준 (Sort By)</span>
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { key: 'date', label: '최신등록순' },
+                { key: 'importance', label: '투자중요도' },
+                { key: 'read_priority', label: '정독우선' },
+                { key: 'verification_need', label: '검증필요' }
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortBy(opt.key as any)}
+                  className={`px-2 py-1 text-[10px] font-bold rounded-md border transition-all cursor-pointer ${
+                    sortBy === opt.key
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 2: Star Filter Selectors */}
+          <div className="space-y-1.5 pt-1.5 border-t border-indigo-100/40">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                다차원 레이팅 최소 점수 필터
+              </span>
+              {(minImportance > 0 || minReadPriority > 0 || minVerificationNeed > 0) && (
+                <button
+                  onClick={() => {
+                    setMinImportance(0);
+                    setMinReadPriority(0);
+                    setMinVerificationNeed(0);
+                  }}
+                  className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                >
+                  필터 초기화
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 bg-white/70 p-2.5 rounded-lg border border-indigo-100/30">
+              {/* Importance filter */}
+              <div className="flex items-center justify-between text-[11px] font-medium text-gray-600">
+                <span className="flex items-center gap-1">
+                  <span>⭐️</span>
+                  <span>투자 중요도 (Importance)</span>
+                </span>
+                <div className="flex gap-1">
+                  {[0, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setMinImportance(num)}
+                      className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                        minImportance === num
+                          ? "bg-amber-500 text-white font-bold"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {num === 0 ? "전체" : `${num}점+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Read Priority filter */}
+              <div className="flex items-center justify-between text-[11px] font-medium text-gray-600">
+                <span className="flex items-center gap-1">
+                  <span>📖</span>
+                  <span>정독 우선순위 (Read Priority)</span>
+                </span>
+                <div className="flex gap-1">
+                  {[0, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setMinReadPriority(num)}
+                      className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                        minReadPriority === num
+                          ? "bg-indigo-600 text-white font-bold"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {num === 0 ? "전체" : `${num}점+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Verification Need filter */}
+              <div className="flex items-center justify-between text-[11px] font-medium text-gray-600">
+                <span className="flex items-center gap-1">
+                  <span>🛡️</span>
+                  <span>검증 필요성 (Verification Need)</span>
+                </span>
+                <div className="flex gap-1">
+                  {[0, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setMinVerificationNeed(num)}
+                      className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                        minVerificationNeed === num
+                          ? "bg-emerald-600 text-white font-bold"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {num === 0 ? "전체" : `${num}점+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Memo List Items */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50/30" id="memo-list-items">
-        {filteredReports.length === 0 ? (
+        {sortedReports.length === 0 ? (
           <div className="text-center py-12 px-4">
             <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500 font-semibold">검색된 메모가 없습니다.</p>
             <p className="text-xs text-gray-400 mt-1">새로운 인사이트 메모를 등록해 보세요.</p>
           </div>
         ) : (
-          filteredReports.map((report) => {
+          sortedReports.map((report) => {
             const isSelected = report.id === selectedReportId;
+            const imp = getReportImportance(report);
+            const readPri = getReportReadPriority(report);
+            const verNeed = getReportVerificationNeed(report);
+
             return (
               <div
                 key={report.id}
@@ -282,16 +495,47 @@ export default function MemoList({
                     </div>
                     <span className="text-[10px] font-mono text-slate-400">{report.date}</span>
                   </div>
-                  {renderStars(report.importance)}
+                  {renderStars(imp)}
                 </div>
                 <h4 className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
                   {report.title}
                 </h4>
+
+                {/* 3D Smart Rating Summary */}
+                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold mt-1.5 bg-slate-50 border border-slate-100/55 p-1 rounded-md max-w-max">
+                  <span className="flex items-center gap-0.5" title="투자 중요도">
+                    <span>⭐️</span>
+                    <span className="text-slate-600 font-bold">{imp}</span>
+                  </span>
+                  <span className="text-gray-200">|</span>
+                  <span className="flex items-center gap-0.5" title="정독 우선순위">
+                    <span>📖</span>
+                    <span className="text-indigo-600 font-bold">{readPri}</span>
+                  </span>
+                  <span className="text-gray-200">|</span>
+                  <span className="flex items-center gap-0.5" title="팩트 검증 필요성">
+                    <span>🛡️</span>
+                    <span className="text-emerald-600 font-bold">{verNeed}</span>
+                  </span>
+                  {report.rating?.notion_save && (
+                    <>
+                      <span className="text-gray-200">|</span>
+                      <span className={`px-1 rounded text-[8px] font-extrabold ${
+                        report.rating.notion_save === "저장" ? "bg-slate-900 text-white" :
+                        report.rating.notion_save === "보류" ? "bg-amber-100 text-amber-800" :
+                        "bg-rose-100 text-rose-800"
+                      }`}>
+                        {report.rating.notion_save}
+                      </span>
+                    </>
+                  )}
+                </div>
+
                 <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
                   {report.summary}
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-2.5 items-center">
-                  {getImportanceBadge(report.importance)}
+                  {getImportanceBadge(imp)}
                   {getVerifiedBadge(report.verified)}
                   {getStatusColorBadge(report.status)}
                   {report.sectors && report.sectors.length > 0 && (
