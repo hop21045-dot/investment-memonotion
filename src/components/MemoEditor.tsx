@@ -37,6 +37,7 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
 9. 강세 논거는 단순한 긍정 요인이 아니라 주가, 실적, 밸류에이션, 수급에 긍정적인 영향을 줄 수 있는 구체적 근거로 작성합니다.
 10. 리스크 요인은 투자 아이디어가 틀릴 수 있는 조건, 반대 시나리오, 과도한 기대가 꺾일 수 있는 요인을 중심으로 작성합니다.
 11. 핵심변수는 앞으로 추적해야 할 숫자, 이벤트, 지표 중심으로 작성합니다.
+12. 중요도 평가는 매우 보수적으로 부여합니다. 단순히 흥미롭거나 읽을 만하다는 이유만으로 4점 이상을 주지 않습니다.
 
 [JSON 스키마]
 
@@ -70,7 +71,7 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
         "rows": []
       },
       "callout": {
-        "type": "info | warning | idea | none",
+        "type": "positive | negative | check point",
         "text": ""
       },
       "source": ""
@@ -91,9 +92,14 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
   },
   "checklist": [],
   "oneLineConclusion": "",
-  "verification": "X",
-  "importance": 3,
-  "importanceLabel": "medium",
+  "rating": {
+    "importance": 3,
+    "read_priority": 3,
+    "verification_need": 2,
+    "notion_save": "저장 | 보류 | 폐기",
+    "recommended_action": "요약만 저장 | 원문 정독 | GPT 검증 | Wiki 반영 후보",
+    "score_rationale": ""
+  },
   "status": "요약완료",
   "action": ""
 }
@@ -103,18 +109,6 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
 "coreSummary.thesis"에는 원문의 핵심 결론과 투자적 의미를 2~4문장으로 압축합니다.
 
 "coreSummary.details"에는 원문에서 확인되는 주요 수치, 발언, 산업 변화, 기업별 포인트를 bullet 배열로 정리합니다.
-
-예시:
-{
-  "coreSummary": {
-    "thesis": "물가 정점 확산과 미국 장기금리 하방 경직이 동시에 나타나며, 단기적으로 위험자산에 우호적인 환경이 형성되고 있다. 다만 미국 재정적자와 국채 수요 이탈이 장기금리의 구조적 하락을 제한하고 있어, 단순한 금리 하락 베팅보다는 변동성 관리가 중요하다.",
-    "details": [
-      "유가가 70달러대로 복귀하며 5월 물가 정점 시각에 힘을 보태고 있다.",
-      "미국채 2년물과 10년물이 일주일 내내 하락하며 단기적으로 금리 부담은 완화됐다.",
-      "다만 미국 재정 확대와 국채 매수세 이탈은 장기금리의 구조적 하방을 제한하는 변수다."
-    ]
-  }
-}
 
 [섹션 작성 방식]
 
@@ -155,21 +149,129 @@ content나 details 안에 마크다운 표(|---|---|)를 직접 작성하지 않
 
 "neutralEvaluation"에는 감정적 결론이 아니라, 강세 논리와 리스크를 함께 고려한 중립적 평가를 작성합니다.
 
-[중요도 기준]
+[등급 평가 방식]
 
-"importance"는 1~5 정수로 작성합니다.
+최종 JSON의 "rating" 객체에는 다음 항목을 반드시 작성합니다.
 
-1 = 단순 참고
-2 = 관심 섹터 참고자료
-3 = 투자 아이디어 후보
-4 = 중요 추적 필요
-5 = 핵심 투자 thesis 또는 Wiki 반영 후보
+1. "importance"
+- 투자판단에 미치는 중요도입니다.
+- 1~5점 정수로 평가합니다.
+- 매우 보수적으로 부여합니다.
 
-"importanceLabel"은 다음 중 하나로 작성합니다.
+2. "read_priority"
+- 원문을 직접 읽어볼 우선순위입니다.
+- 1~5점 정수로 평가합니다.
+- 원문에 중요한 수치, 발언, 근거, 산업 변화가 많을수록 높게 평가합니다.
 
-1~2 = low
-3 = medium
-4~5 = high
+3. "verification_need"
+- 숫자, 해석, 주장에 대한 검증 필요성입니다.
+- 1~5점 정수로 평가합니다.
+- 수치가 많거나, 투자 판단에 영향을 줄 수 있는 해석이 포함되어 있거나, 원문과 요약 간 왜곡 가능성이 높을수록 높게 평가합니다.
+
+4. "notion_save"
+- 다음 셋 중 하나로 작성합니다.
+- "저장": 노션에 저장할 가치가 있는 자료
+- "보류": 링크만 보관하거나 추후 확인할 자료
+- "폐기": 저장 가치가 낮은 자료
+
+5. "recommended_action"
+- 다음 중 하나로 작성합니다.
+- "요약만 저장"
+- "원문 정독"
+- "GPT 검증"
+- "Wiki 반영 후보"
+
+6. "score_rationale"
+- 왜 해당 점수를 부여했는지 2~3문장으로 설명합니다.
+- 특히 4점 이상을 부여할 경우, 왜 원문 정독 또는 검증이 필요한지 구체적으로 설명합니다.
+
+[importance 평가 기준]
+
+importance는 1~5점으로 평가하되 매우 보수적으로 부여합니다.
+
+5점:
+보유종목, 핵심 관심기업, 핵심 섹터의 투자판단을 바꿀 수 있는 자료입니다.
+실적 추정, 수주잔고, Capex, 밸류에이션, 산업 구조 변화에 직접 영향을 주며, 즉시 원문 정독과 GPT 검증이 필요한 자료입니다.
+전체 자료 중 상위 5% 이내에 해당할 때만 부여합니다.
+
+4점:
+노션에 저장하고 핵심 부분을 읽어볼 가치가 있는 자료입니다.
+기업 또는 섹터 Wiki에 반영할 만한 근거가 있으나, 투자판단을 즉시 바꿀 정도는 아닌 자료입니다.
+전체 자료 중 상위 20% 이내에 해당할 때만 부여합니다.
+
+3점:
+요약만 저장하면 충분한 참고자료입니다.
+흥미롭지만 기존 투자논리 보강 수준이거나 기존 내용의 반복이 많은 자료입니다.
+
+2점:
+링크만 보관하거나 보류할 자료입니다.
+투자 아이디어와 연결이 약하고 구체적 숫자나 액션 포인트가 부족한 자료입니다.
+
+1점:
+저장하지 않아도 되는 자료입니다.
+홍보성, 일반론, 중복 내용이 많거나 투자 판단에 거의 도움이 되지 않는 자료입니다.
+
+[read_priority 평가 기준]
+
+5점:
+원문을 반드시 정독해야 합니다. 핵심 수치, 산업 구조 변화, 기업 실적 전망, 경영진 발언, 수주·Capex·밸류에이션 변화가 직접 포함된 자료입니다.
+
+4점:
+원문 핵심 부분을 읽어볼 가치가 있습니다. 요약만으로는 맥락 누락 가능성이 있습니다.
+
+3점:
+요약 확인만으로도 대부분의 내용을 파악할 수 있습니다.
+
+2점:
+제목과 핵심 bullet 정도만 확인해도 충분합니다.
+
+1점:
+원문을 읽을 필요가 거의 없습니다.
+
+[verification_need 평가 기준]
+
+5점:
+수치, 실적 추정, 밸류에이션, 계약 규모, 시장점유율, Capex, 수주잔고 등 검증이 필수인 자료입니다. 오류 시 투자판단에 큰 영향을 줄 수 있습니다.
+
+4점:
+핵심 수치나 해석의 검증 필요성이 높습니다. GPT 검증 또는 원문 대조가 권장됩니다.
+
+3점:
+일부 수치나 해석은 확인할 필요가 있지만, 전체 투자판단을 크게 흔일 정도는 아닙니다.
+
+2점:
+대체로 정성적 내용이며 검증 필요성이 낮습니다.
+
+1점:
+검증할 구체 수치나 투자 판단 요소가 거의 없습니다.
+
+[notion_save 판단 기준]
+
+- importance가 5이면 "저장"
+- importance가 4이면 "저장"
+- importance가 3이면 대체로 "저장"
+- importance가 2이면 대체로 "보류"
+- importance가 1이면 대체로 "폐기"
+
+단, importance가 낮더라도 verification_need가 5이면 "보류" 또는 "저장"으로 판단할 수 있습니다.
+
+[recommended_action 판단 기준]
+
+- importance 5: "GPT 검증" 또는 "Wiki 반영 후보"
+- importance 4: "원문 정독"
+- importance 3: "요약만 저장"
+- importance 1~2: "요약만 저장" 또는 "보류"
+
+단, verification_need가 4~5이면 importance가 낮아도 "GPT 검증"을 선택할 수 있습니다.
+
+[중요도 분포 원칙]
+
+- 5점은 전체 자료 중 상위 5% 이내로 제한합니다.
+- 4점은 전체 자료 중 상위 20% 이내로 제한합니다.
+- 3점은 보통의 괜찮은 자료입니다.
+- 1~2점은 저장 가치가 낮은 자료입니다.
+- 단순히 “읽을 만하다”, “흥미롭다”, “섹터와 관련 있다”는 이유만으로 4점 이상을 주지 않습니다.
+- 4점 이상을 주려면 반드시 원문 정독이 필요한 이유를 "score_rationale"에 구체적으로 제시합니다.
 
 [금지사항]
 
@@ -178,7 +280,9 @@ content나 details 안에 마크다운 표(|---|---|)를 직접 작성하지 않
 3. 강세 논거와 리스크 요인을 단순 키워드로만 쓰지 마세요.
 4. 모든 내용을 content 하나에 몰아넣지 마세요.
 5. 표 데이터를 content 안에 마크다운 표로 직접 작성하지 마세요.
-6. 출처를 알 수 없는 경우에는 빈 문자열로 두세요.`;
+6. 출처를 알 수 없는 경우에는 빈 문자열로 두세요.
+7. 중요도를 후하게 주지 마세요.
+8. "흥미롭다", "읽을 만하다", "관련 있다"는 이유만으로 importance 4점 이상을 부여하지 마세요.`;
 
 // Helper to extract table from text content if AI mistakenly embeds it as markdown table in text
 function extractTableFromContent(content: string): { cleanedContent: string; table: { headers: string[]; rows: string[][] } | null } {
@@ -542,9 +646,9 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               author: sec.quote.author || ""
             } : { text: "", author: "" },
             callout: sec.callout ? {
-              type: sec.callout.type || "warning",
+              type: sec.callout.type === "warning" ? "check point" : sec.callout.type === "risk" ? "negative" : (sec.callout.type || "check point"),
               text: sec.callout.text || ""
-            } : { type: "warning", text: "" },
+            } : { type: "check point", text: "" },
             table: parsedTable,
             source: sec.source || ""
           };
@@ -721,9 +825,9 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               author: sec.quote.author || ""
             } : { text: "", author: "" },
             callout: sec.callout ? {
-              type: sec.callout.type || "warning",
+              type: sec.callout.type === "warning" ? "check point" : sec.callout.type === "risk" ? "negative" : (sec.callout.type || "check point"),
               text: sec.callout.text || ""
-            } : { type: "warning", text: "" },
+            } : { type: "check point", text: "" },
             table: parsedTable,
             source: sec.source || ""
           };
@@ -819,7 +923,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       content: "",
       quote: { text: "", author: "" },
       table: { headers: ["구분", "상세 내용"], rows: [["", ""]] },
-      callout: { type: "warning", text: "" }
+      callout: { type: "check point", text: "" }
     };
     setSections([...sections, newSec]);
   };
@@ -846,7 +950,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
 
   const updateSectionCallout = (idx: number, cField: "type" | "text", value: string) => {
     const updated = [...sections];
-    const callout = updated[idx].callout || { type: "warning", text: "" };
+    const callout = updated[idx].callout || { type: "check point", text: "" };
     updated[idx] = {
       ...updated[idx],
       callout: { ...callout, [cField]: value }
@@ -1678,13 +1782,15 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                     <div className="text-[10px] font-bold text-gray-450 uppercase tracking-wider flex items-center justify-between">
                       <span>핵심 박스 (Callout - 선택 사항)</span>
                       <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 text-[10px]">
-                        {(['warning', 'positive', 'risk'] as const).map((type) => (
+                        {(['positive', 'negative', 'check point'] as const).map((type) => (
                           <button
                             key={type}
                             type="button"
                             onClick={() => updateSectionCallout(secIdx, "type", type)}
                             className={`px-2 py-0.5 rounded capitalize font-bold ${
-                              sec.callout?.type === type
+                              (sec.callout?.type === type || 
+                               (type === 'check point' && sec.callout?.type === 'warning') ||
+                               (type === 'negative' && sec.callout?.type === 'risk'))
                                 ? "bg-black text-white"
                                 : "text-gray-500 hover:text-black"
                             }`}

@@ -106,7 +106,7 @@ Provide your response in JSON format matching this schema:
         ]
       },
       "callout": {
-        "type": "warning | positive | risk",
+        "type": "positive | negative | check point",
         "text": "Actionable, highlighting sentence (without including the emoji since the UI will render it based on the type)"
       }
     }

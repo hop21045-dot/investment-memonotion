@@ -9,7 +9,7 @@ export interface CustomTable {
 }
 
 export interface Callout {
-  type: 'warning' | 'positive' | 'risk';
+  type: 'positive' | 'negative' | 'check point' | 'warning' | 'risk'; // keep legacy warning and risk for database compatibility
   text: string;
 }
 

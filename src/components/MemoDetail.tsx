@@ -739,11 +739,11 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
       }
       if (sec.callout && sec.callout.text) {
         const emoji =
-          sec.callout.type === "warning"
-            ? "⚠️"
-            : sec.callout.type === "positive"
+          sec.callout.type === "positive"
             ? "✅"
-            : "❌";
+            : (sec.callout.type === "negative" || sec.callout.type === "risk")
+            ? "❌"
+            : "⚠️";
         md += `> **${emoji}** ${sec.callout.text}\n\n`;
       }
     });
@@ -1223,29 +1223,29 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
                 {sec.callout && sec.callout.text && (
                   <div
                     className={`flex gap-2.5 p-4 rounded-lg border leading-relaxed text-xs md:text-sm my-3 ${
-                      sec.callout.type === "warning"
-                        ? "bg-amber-50/50 border-amber-200/40 text-amber-900"
-                        : sec.callout.type === "positive"
+                      sec.callout.type === "positive"
                         ? "bg-emerald-50/50 border-emerald-200/40 text-emerald-900"
-                        : "bg-rose-50/50 border-rose-200/40 text-rose-900"
+                        : (sec.callout.type === "negative" || sec.callout.type === "risk")
+                        ? "bg-rose-50/50 border-rose-200/40 text-rose-900"
+                        : "bg-amber-50/50 border-amber-200/40 text-amber-900"
                     }`}
                   >
                     <div className="flex-shrink-0 mt-0.5">
-                      {sec.callout.type === "warning" ? (
-                        <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      ) : sec.callout.type === "positive" ? (
+                      {sec.callout.type === "positive" ? (
                         <Check className="w-4 h-4 text-emerald-600" />
-                      ) : (
+                      ) : (sec.callout.type === "negative" || sec.callout.type === "risk") ? (
                         <ShieldAlert className="w-4 h-4 text-rose-600" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-600" />
                       )}
                     </div>
                     <div>
                       <strong className="font-semibold block mb-0.5">
-                        {sec.callout.type === "warning"
-                          ? "주의 사항 (Warning)"
-                          : sec.callout.type === "positive"
-                          ? "체크 포인트 (Key Positive)"
-                          : "리스크 요인 (Risk Factors)"}
+                        {sec.callout.type === "positive"
+                          ? "강세 요소 (Positive)"
+                          : (sec.callout.type === "negative" || sec.callout.type === "risk")
+                          ? "리스크 요인 (Negative)"
+                          : "체크 포인트 (Check Point)"}
                       </strong>
                       <span className="text-slate-600">{sec.callout.text}</span>
                     </div>
