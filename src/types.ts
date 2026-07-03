@@ -41,6 +41,15 @@ export interface InvestmentView {
   neutralEvaluation: string;
 }
 
+export interface Rating {
+  importance: number;
+  read_priority: number;
+  verification_need: number;
+  notion_save: '저장' | '보류' | '폐기' | string;
+  recommended_action: '요약만 저장' | '원문 정독' | 'GPT 검증' | 'Wiki 반영 후보' | string;
+  score_rationale: string;
+}
+
 export interface StructuredReport {
   id: string;
   title: string;
@@ -57,6 +66,7 @@ export interface StructuredReport {
   attachedPdfSize?: string;
   sectors?: string[];
   importance?: number; // 1 to 5 rating scale based on investment significance
+  rating?: Rating;
   verified?: "O" | "X";
   status?: "요약완료" | "정독필요" | "검증중" | "검증완료" | "Wiki반영";
   action?: "1차 요약 필요" | "원문 정독" | "원문 검증 필요" | "ChatGPT 검증 대기" | "Wiki 반영 후보" | "Wiki 반영 필요" | "트래커 업데이트 필요" | "보류" | "폐기" | "";

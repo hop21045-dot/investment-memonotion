@@ -363,6 +363,7 @@ export default function App() {
               onEdit={() => setIsEditing(true)}
               onDelete={handleDeleteReport}
               onSelectSector={handleSelectSector}
+              onSave={handleSaveReport}
             />
           )}
         </div>

@@ -141,7 +141,7 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
-          required: ["title", "date", "category", "summary", "keyPoints", "importance", "verified", "status", "action", "sections", "investmentView"],
+          required: ["title", "date", "category", "summary", "keyPoints", "importance", "verified", "status", "action", "rating", "sections", "investmentView"],
           properties: {
             title: { type: Type.STRING },
             date: { type: Type.STRING },
@@ -156,6 +156,18 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
             verified: { type: Type.STRING, enum: ["O", "X"] },
             status: { type: Type.STRING, enum: ["요약완료", "정독필요", "검증중", "검증완료", "Wiki반영"] },
             action: { type: Type.STRING, enum: ["1차 요약 필요", "원문 정독", "원문 검증 필요", "ChatGPT 검증 대기", "Wiki 반영 후보", "Wiki 반영 필요", "트래커 업데이트 필요", "보류", "폐기", ""] },
+            rating: {
+              type: Type.OBJECT,
+              required: ["importance", "read_priority", "verification_need", "notion_save", "recommended_action", "score_rationale"],
+              properties: {
+                importance: { type: Type.INTEGER },
+                read_priority: { type: Type.INTEGER },
+                verification_need: { type: Type.INTEGER },
+                notion_save: { type: Type.STRING },
+                recommended_action: { type: Type.STRING },
+                score_rationale: { type: Type.STRING }
+              }
+            },
              sections: {
               type: Type.ARRAY,
               items: {
@@ -260,6 +272,104 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
   } catch (error: any) {
     console.error("Gemini Generation Error:", error);
     res.status(500).json({ error: error.message || "메모 분석 및 구조화에 실패했습니다." });
+  }
+});
+
+app.post("/api/re-evaluate", async (req, res) => {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(400).json({ error: "GEMINI_API_KEY environment variable is not configured yet. Please configure it in Settings." });
+    }
+    const ai = getAiClient();
+    const { report } = req.body;
+    if (!report) {
+      return res.status(400).json({ error: "평가할 리포트 데이터가 필요합니다." });
+    }
+
+    const systemInstruction = `You are a professional financial investment analyst.
+Your task is to review the provided structured research memo and output a multi-dimensional rating object based on these guidelines:
+
+1. "importance" (투자판단 중요도, 1-5점):
+- 5점: 보유종목 직접 관련, 기존 투자 아이디어나 논리를 완전히 변화시킬 수준 (상위 5% 이내)
+- 4점: Wiki 반영 후보, 핵심 부분을 집중해서 정독해야 함 (상위 20% 이내)
+- 3점: 참고용 뉴스/소식으로 요약본만 보관해도 충분함
+- 2점: 흥미가 있으나 우선순위가 떨어지는 배경지식
+- 1점: 단순 가십, 중복, 폐기 가능한 자료
+
+2. "read_priority" (원문 정독 우선순위, 1-5점):
+- 5점: 원문 완독 필수 (수치, Capex, 경영진 발언, 실적 전망 풍부)
+- 4점: 핵심 부분 정독 권장 (요약 누락 가능성 있음)
+- 3점: 요약만으로도 파악 가능
+- 2점: 헤드라인과 핵심 한두 줄만 보면 충분
+- 1점: 원문을 읽을 필요 없음
+
+3. "verification_need" (팩트/숫자 검증 필요성, 1-5점):
+- 5점: 핵심 계약, 재무지표, 실적추정 등의 숫자가 많아 오기 시 치명적인 경우
+- 4점: 중요 숫자나 독자적 해석이 많아 교차검증 권장
+- 3점: 일부 수치 확인 필요
+- 2점: 정성적 설명 위주이며 검증할 수치 거의 없음
+- 1점: 단순 사실 기록 또는 확인 필요 요소 없음
+
+4. "notion_save" (노션 영구 저장 여부):
+- "저장" (중요도 3-5점 또는 검증 필요성 4-5점인 경우)
+- "보류" (중요도 2점 또는 가볍게 보관할 경우)
+- "폐기" (중요도 1점 및 영구 보존 가치가 극히 낮을 경우)
+- 이 셋 중 하나를 무조건 선택해야 합니다.
+
+5. "recommended_action" (추천 액션):
+- "요약만 저장" | "원문 정독" | "GPT 검증" | "Wiki 반영 후보" 중 선택해서 그대로 출력해야 합니다.
+
+6. "score_rationale" (평가 근거, 한국어로 작성):
+- 왜 해당 점수들을 부여했는지 2~3문장으로 논리적인 설명을 제시하세요.
+
+Response MUST be a single raw JSON object matching the requested schema. No markdown wrappers.`;
+
+    const prompt = `Please evaluate the following structured memo and provide the 6 rating fields:
+
+TITLE: ${report.title}
+SUMMARY: ${report.summary}
+KEY POINTS:
+${report.keyPoints?.map((kp: string) => `- ${kp}`).join("\n")}
+
+SECTIONS:
+${report.sections?.map((sec: any) => `### ${sec.title}\n${sec.summary || sec.content}`).join("\n\n")}
+
+INVESTMENT VIEW:
+Mentioned Assets: ${JSON.stringify(report.investmentView?.mentionedAssets)}
+Bull Arguments: ${report.investmentView?.bullArguments?.join("\n")}
+Bear Caveats: ${report.investmentView?.caveats?.join("\n")}
+Neutral Assessment: ${report.investmentView?.neutralEvaluation}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          required: ["importance", "read_priority", "verification_need", "notion_save", "recommended_action", "score_rationale"],
+          properties: {
+            importance: { type: Type.INTEGER },
+            read_priority: { type: Type.INTEGER },
+            verification_need: { type: Type.INTEGER },
+            notion_save: { type: Type.STRING },
+            recommended_action: { type: Type.STRING },
+            score_rationale: { type: Type.STRING }
+          }
+        }
+      }
+    });
+
+    if (!response.text) {
+      throw new Error("비어있는 응답입니다.");
+    }
+
+    const rating = JSON.parse(response.text.trim());
+    res.json({ rating });
+  } catch (error: any) {
+    console.error("Re-evaluation Error:", error);
+    res.status(500).json({ error: error.message || "평가 근거 생성에 실패했습니다." });
   }
 });
 

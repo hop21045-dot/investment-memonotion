@@ -445,6 +445,13 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [keyPoints, setKeyPoints] = useState<string[]>(["", "", ""]);
   const [sections, setSections] = useState<Section[]>([]);
   
+  // Multi-dimensional rating fields state
+  const [readPriority, setReadPriority] = useState<number>(3);
+  const [verificationNeed, setVerificationNeed] = useState<number>(2);
+  const [notionSave, setNotionSave] = useState<string>("보류");
+  const [recommendedAction, setRecommendedAction] = useState<string>("요약만 저장");
+  const [scoreRationale, setScoreRationale] = useState<string>("");
+
   // Investment view states
   const [mentionedAssets, setMentionedAssets] = useState<MentionedAsset[]>([]);
   const [bullArguments, setBullArguments] = useState<string[]>([]);
@@ -477,6 +484,20 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
       setCaveats(inv.caveats ? [...inv.caveats] : []);
       setNeutralEvaluation(inv.neutralEvaluation || "");
+
+      if (report.rating) {
+        setReadPriority(report.rating.read_priority || 3);
+        setVerificationNeed(report.rating.verification_need || 2);
+        setNotionSave(report.rating.notion_save || "보류");
+        setRecommendedAction(report.rating.recommended_action || "요약만 저장");
+        setScoreRationale(report.rating.score_rationale || "");
+      } else {
+        setReadPriority(3);
+        setVerificationNeed(report.verified === "O" ? 4 : 2);
+        setNotionSave((report.importance || 3) >= 4 ? "저장" : "보류");
+        setRecommendedAction(report.action || "요약만 저장");
+        setScoreRationale("");
+      }
     } else {
       // Pre-fill clean state for "New Memo"
       setTitle("");
@@ -505,6 +526,12 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setBullArguments(["시장 지배력의 점진적 향상", "견조한 레거시 수요"]);
       setCaveats(["글로벌 금리 고조 리스크"]);
       setNeutralEvaluation("시장 변동성에 주의하되 성장 섹터에 집중하는 보수적 접근이 필요합니다.");
+
+      setReadPriority(3);
+      setVerificationNeed(2);
+      setNotionSave("보류");
+      setRecommendedAction("요약만 저장");
+      setScoreRationale("");
     }
   }, [report]);
 
@@ -592,6 +619,21 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
       if (data.status !== undefined) setStatus(data.status);
       if (data.action !== undefined) setAction(data.action);
+
+      if (data.rating) {
+        setReadPriority(Number(data.rating.read_priority) || 3);
+        setVerificationNeed(Number(data.rating.verification_need) || 2);
+        setNotionSave(data.rating.notion_save || "보류");
+        setRecommendedAction(data.rating.recommended_action || "요약만 저장");
+        setScoreRationale(data.rating.score_rationale || "");
+        if (data.rating.importance !== undefined) setImportance(Number(data.rating.importance));
+      } else {
+        setReadPriority(3);
+        setVerificationNeed(isVerified === "O" ? 4 : 2);
+        setNotionSave((data.importance !== undefined ? Number(data.importance) : 3) >= 4 ? "저장" : "보류");
+        setRecommendedAction(data.action || "요약만 저장");
+        setScoreRationale("AI에 의해 자동으로 추정된 초기 다차원 등급입니다.");
+      }
       
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
@@ -770,6 +812,21 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (isVerified !== undefined) setVerified(isVerified === "O" ? "O" : "X");
       if (data.status !== undefined) setStatus(data.status);
       if (data.action !== undefined) setAction(data.action);
+
+      if (data.rating) {
+        setReadPriority(Number(data.rating.read_priority) || 3);
+        setVerificationNeed(Number(data.rating.verification_need) || 2);
+        setNotionSave(data.rating.notion_save || "보류");
+        setRecommendedAction(data.rating.recommended_action || "요약만 저장");
+        setScoreRationale(data.rating.score_rationale || "");
+        if (data.rating.importance !== undefined) setImportance(Number(data.rating.importance));
+      } else {
+        setReadPriority(3);
+        setVerificationNeed(isVerified === "O" ? 4 : 2);
+        setNotionSave((data.importance !== undefined ? Number(data.importance) : 3) >= 4 ? "저장" : "보류");
+        setRecommendedAction(data.action || "요약만 저장");
+        setScoreRationale("AI에 의해 자동으로 추정된 초기 다차원 등급입니다.");
+      }
       
       // 4. Fill in sections
       if (data.sections && Array.isArray(data.sections)) {
@@ -891,6 +948,14 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       sourceUrls: nonEvUrls,
       summary,
       importance,
+      rating: {
+        importance,
+        read_priority: readPriority,
+        verification_need: verificationNeed,
+        notion_save: notionSave,
+        recommended_action: recommendedAction,
+        score_rationale: scoreRationale
+      },
       verified,
       status,
       action,
@@ -1512,60 +1577,169 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               </div>
             </div>
 
-            {/* Importance Rating Selector */}
-            <div className="col-span-1 md:col-span-2 space-y-2 border-t border-gray-100 pt-4">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">⭐️ 중요도 및 레이팅 등급 (Importance Rating)</label>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setImportance(num)}
-                      className="text-2xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
-                    >
-                      <span className={num <= importance ? "text-amber-500 font-bold" : "text-gray-200"}>
-                        ★
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full">
-                  {importance}점 / 5점
+            {/* Multi-dimensional Smart Rating Block */}
+            <div className="col-span-1 md:col-span-2 space-y-4 border-t border-gray-100 pt-5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>스마트 다차원 리포트 등급 평가 (Smart Rating)</span>
+                </label>
+                <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
+                  3단계 가중 레이팅 시스템
                 </span>
               </div>
-              
-              {/* Context Explanation based on selected rating */}
-              <div className="p-3.5 rounded-xl border bg-gray-50/50 border-gray-200 text-xs space-y-2 max-w-2xl">
-                <div className="pb-1.5 border-b border-gray-200 text-[11px] text-gray-500">
-                  <span className="font-bold text-gray-700 block mb-0.5">💡 원문 정독 기준 (아래 조건 충족 시 필수 정독):</span>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 font-medium pl-1">
-                    <div>• 보유종목과 직접 관련 있음</div>
-                    <div>• 내가 작성 중인 리포트에 반영 가능</div>
-                    <div>• 기존 투자 논리를 바꿀 수 있음</div>
-                    <div>• 새로운 산업 프레임을 제공함</div>
-                    <div className="col-span-2">• 숫자, 수주, Capex, 실적 전망이 중요함</div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50/40 border border-gray-150 p-5 rounded-2xl">
+                {/* Row 1: Importance Star Selection */}
+                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                      <span>⭐️</span>
+                      <span>투자 중요도 (Importance)</span>
+                    </label>
+                    <p className="text-[10px] text-gray-405 leading-tight mt-0.5 min-h-[28px]">
+                      보유 종목 연관성 및 아이디어 변화 영향력
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setImportance(num)}
+                          className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                        >
+                          <span className={num <= importance ? "text-amber-500 font-bold" : "text-gray-200"}>
+                            ★
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
+                      {importance}점
+                    </span>
                   </div>
                 </div>
 
-                <p className="font-bold text-slate-800 flex items-center gap-1">
-                  🎯 {
-                    importance === 5 ? "[5점] 투자판단에 직접 영향 (행동: 원문 정독 + 검증)" :
-                    importance === 4 ? "[4점] 섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)" :
-                    importance === 3 ? "[3점] 참고자료 (행동: 요약만 저장)" :
-                    importance === 2 ? "[2점] 흥미는 있으나 낮은 우선순위 (행동: 링크만 보관)" :
-                    "[1점] 저장 가치 낮음 (행동: 폐기 가능)"
-                  }
-                </p>
-                <p className="text-gray-500 leading-relaxed font-medium">
-                  {
-                    importance === 5 ? "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다." :
-                    importance === 4 ? "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보다 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다." :
-                    importance === 3 ? "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다." :
-                    importance === 2 ? "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다." :
-                    "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
-                  }
-                </p>
+                {/* Row 2: Read Priority Star Selection */}
+                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                      <span>📖</span>
+                      <span>원문 정독 우선순위 (Read Priority)</span>
+                    </label>
+                    <p className="text-[10px] text-gray-405 leading-tight mt-0.5 min-h-[28px]">
+                      요약만으로 충분한지, 원문 완독이 필요한지 여부
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setReadPriority(num)}
+                          className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                        >
+                          <span className={num <= readPriority ? "text-indigo-600 font-bold" : "text-gray-200"}>
+                            ★
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                      {readPriority}점
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 3: Verification Need Star Selection */}
+                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                      <span>🛡️</span>
+                      <span>팩트 검증 필요성 (Verification Need)</span>
+                    </label>
+                    <p className="text-[10px] text-gray-455 leading-tight mt-0.5 min-h-[28px]">
+                      실적/Capex 등 치명적인 재무 수치 검증 요구도
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setVerificationNeed(num)}
+                          className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                        >
+                          <span className={num <= verificationNeed ? "text-emerald-600 font-bold" : "text-gray-200"}>
+                            ★
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                      {verificationNeed}점
+                    </span>
+                  </div>
+                </div>
+
+                {/* Notion Save Radio Block */}
+                <div className="col-span-1 md:col-span-1 space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">💾 노션 영구 저장 여부</label>
+                  <div className="grid grid-cols-3 gap-1">
+                    {["저장", "보류", "폐기"].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setNotionSave(opt)}
+                        className={`py-2 text-xs font-bold border rounded-lg transition-all cursor-pointer ${
+                          notionSave === opt
+                            ? opt === "저장"
+                              ? "bg-black text-white border-black"
+                              : opt === "보류"
+                              ? "bg-amber-600 text-white border-amber-600"
+                              : "bg-rose-600 text-white border-rose-600"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recommended Action block */}
+                <div className="col-span-1 md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">🎯 추천 후속 액션 (Recommended Action)</label>
+                  <select
+                    value={recommendedAction}
+                    onChange={(e) => setRecommendedAction(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white font-semibold cursor-pointer"
+                  >
+                    {["요약만 저장", "원문 정독", "GPT 검증", "Wiki 반영 후보"].map((act) => (
+                      <option key={act} value={act}>
+                        {act === "요약만 저장" ? "📌 요약본만 보관 (요약만 저장)" :
+                         act === "원문 정독" ? "📖 원문 상세 정독 (원문 정독)" :
+                         act === "GPT 검증" ? "🤖 교차 검증 필요 (GPT 검증)" :
+                         "🌟 영구 지식고 반영 (Wiki 반영 후보)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Rationale Textarea Block */}
+                <div className="col-span-1 md:col-span-3 space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">💬 평가 및 등급 부여 근거 (Score Rationale)</label>
+                  <textarea
+                    value={scoreRationale}
+                    onChange={(e) => setScoreRationale(e.target.value)}
+                    placeholder="레이팅 등급을 부여한 배경 논거와 향후 확인이 필요한 수치 등을 기록해 주세요..."
+                    className="w-full text-xs p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 h-16 font-sans resize-none"
+                  />
+                </div>
               </div>
             </div>
           </div>

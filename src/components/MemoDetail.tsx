@@ -20,7 +20,8 @@ import {
   Lightbulb,
   Globe,
   Download,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from "lucide-react";
 
 // Robust parser to convert basic markdown to HTML for the downloadable report
@@ -101,10 +102,13 @@ interface MemoDetailProps {
   onEdit: () => void;
   onDelete: (id: string) => void;
   onSelectSector?: (sector: string) => void;
+  onSave?: (report: StructuredReport) => void;
 }
 
-export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }: MemoDetailProps) {
+export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, onSave }: MemoDetailProps) {
   const [copied, setCopied] = useState(false);
+  const [isReEvaluating, setIsReEvaluating] = useState(false);
+  const [reEvaluateError, setReEvaluateError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
@@ -778,6 +782,46 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
     });
   };
 
+  const handleReEvaluate = async () => {
+    if (!report) return;
+    setIsReEvaluating(true);
+    setReEvaluateError(null);
+    try {
+      const response = await fetch("/api/re-evaluate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ report })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "재평가 중 오류가 발생했습니다.");
+      }
+
+      const data = await response.json();
+      if (data.rating) {
+        const updatedReport: StructuredReport = {
+          ...report,
+          rating: data.rating,
+          importance: data.rating.importance !== undefined ? Number(data.rating.importance) : report.importance,
+          updatedAt: Date.now()
+        };
+        if (onSave) {
+          onSave(updatedReport);
+        }
+      } else {
+        throw new Error("AI가 올바른 레이팅 정보를 반환하지 않았습니다.");
+      }
+    } catch (err: any) {
+      console.error("Re-evaluation failed:", err);
+      setReEvaluateError(err.message || "오류가 발생했습니다.");
+    } finally {
+      setIsReEvaluating(false);
+    }
+  };
+
   const getCategoryTheme = (category: string) => {
     switch (category) {
       case "youtube":
@@ -980,19 +1024,141 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector }:
               </span>
             </div>
 
-            <div className="flex items-start gap-4 col-span-1 md:col-span-2">
-              <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-1 flex-shrink-0">
-                ⭐️ 중요도 등급
-              </span>
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  {renderStars(report.importance)}
-                  <span className="text-gray-900 font-bold text-xs bg-gray-100 px-2 py-0.5 rounded">
-                    {report.importance || 0} / 5 점
+            {/* Multi-dimensional Rating Visualizer */}
+            <div className="flex flex-col gap-4 col-span-1 md:col-span-2 border border-slate-150 bg-slate-50/40 p-4 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>스마트 다차원 리포트 등급 평가</span>
+                </span>
+                
+                {report.rating && (
+                  <button
+                    onClick={handleReEvaluate}
+                    disabled={isReEvaluating}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-100 rounded-md cursor-pointer transition-all disabled:opacity-50"
+                  >
+                    {isReEvaluating ? "재평가 중..." : "🔄 다시 재평가"}
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Importance */}
+                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold">투자 중요도 (Importance)</span>
+                  <div className="flex items-center justify-between mt-1">
+                    {renderStars(report.rating?.importance !== undefined ? report.rating.importance : report.importance)}
+                    <span className="text-[11px] font-bold text-slate-800">
+                      {report.rating?.importance !== undefined ? report.rating.importance : (report.importance || 0)}점
+                    </span>
+                  </div>
+                </div>
+
+                {/* Read Priority */}
+                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold">정독 우선순위 (Read Priority)</span>
+                  <div className="flex items-center justify-between mt-1">
+                    {renderStars(report.rating?.read_priority || 3)}
+                    <span className="text-[11px] font-bold text-indigo-650">
+                      {report.rating?.read_priority || 3}점
+                    </span>
+                  </div>
+                </div>
+
+                {/* Verification Need */}
+                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold">검증 필요성 (Verification Need)</span>
+                  <div className="flex items-center justify-between mt-1">
+                    {renderStars(report.rating?.verification_need || (report.verified === "O" ? 4 : 2))}
+                    <span className="text-[11px] font-bold text-emerald-650">
+                      {report.rating?.verification_need || (report.verified === "O" ? 4 : 2)}점
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save & Action Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-xl text-xs font-semibold text-slate-700">
+                  <span className="text-slate-400">💾 노션 저장 여부</span>
+                  <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] ${
+                    (report.rating?.notion_save || (report.importance && report.importance >= 4 ? "저장" : "보류")) === "저장"
+                      ? "bg-slate-900 text-white"
+                      : (report.rating?.notion_save || "보류") === "보류"
+                      ? "bg-amber-100 text-amber-800 border border-amber-200/50"
+                      : "bg-rose-100 text-rose-800 border border-rose-200/50"
+                  }`}>
+                    {report.rating?.notion_save || (report.importance && report.importance >= 4 ? "저장" : "보류")}
                   </span>
                 </div>
-                {getImportanceBadgeLabel(report.importance)}
+
+                <div className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-xl text-xs font-semibold text-slate-700">
+                  <span className="text-slate-400">🎯 추천 후속 액션</span>
+                  <span className="bg-indigo-50 border border-indigo-150 text-indigo-700 px-2.5 py-0.5 rounded-md font-bold text-[11px]">
+                    {report.rating?.recommended_action || report.action || "요약만 저장"}
+                  </span>
+                </div>
               </div>
+
+              {/* Rationale Text */}
+              {(report.rating?.score_rationale || getImportanceBadgeLabel(report.importance)) && (
+                <div className="bg-white border border-slate-100 p-3.5 rounded-xl text-[11px] leading-relaxed font-medium text-slate-600">
+                  <span className="font-bold text-slate-800 block mb-1">💡 평가 및 추천 행동 근거</span>
+                  {report.rating?.score_rationale ? (
+                    <p>{report.rating.score_rationale}</p>
+                  ) : (
+                    <div>
+                      <p className="font-bold text-amber-750 mb-1">
+                        🎯 {
+                          report.importance === 5 ? "투자판단에 직접 영향 (행동: 원문 정독 + 검증)" :
+                          report.importance === 4 ? "섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)" :
+                          report.importance === 3 ? "참고자료 (행동: 요약만 저장)" :
+                          report.importance === 2 ? "흥미는 있으나 낮은 우선순위 (행동: 링크만 보관)" :
+                          "저장 가치 낮음 (행동: 폐기 가능)"
+                        }
+                      </p>
+                      <p className="text-slate-500 leading-relaxed font-medium">
+                        {
+                          report.importance === 5 ? "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다." :
+                          report.importance === 4 ? "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보다 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다." :
+                          report.importance === 3 ? "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다." :
+                          report.importance === 2 ? "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다." :
+                          "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* One-click AI Rating generator for legacy memos */}
+              {!report.rating && (
+                <div className="mt-2 p-3 bg-indigo-50/75 border border-indigo-100 rounded-xl text-center space-y-2">
+                  <p className="text-[11px] font-bold text-indigo-900 leading-relaxed">
+                    💡 이 자료는 기존에 등록되어 상세 다차원 평가(정독 우선순위, 검증 필요성 등)가 누락되어 있습니다.
+                  </p>
+                  <button
+                    onClick={handleReEvaluate}
+                    disabled={isReEvaluating}
+                    className="w-full py-2 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:bg-indigo-400"
+                  >
+                    {isReEvaluating ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>AI 분석 등급 생성 중...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔄 AI 다차원 등급 평가 자동 실행하기</span>
+                      </>
+                    )}
+                  </button>
+                  {reEvaluateError && (
+                    <p className="text-[10px] text-rose-650 font-bold">{reEvaluateError}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {((report.sourceUrls && report.sourceUrls.filter(u => u.trim()).length > 0) || report.sourceUrl) && (
