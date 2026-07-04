@@ -402,6 +402,87 @@ function extractTableFromContent(content: string): { cleanedContent: string; tab
   return { cleanedContent: content, table: null };
 }
 
+const ratingExplanations = {
+  importance: {
+    title: "투자 중요도 (Importance)",
+    icon: "⭐️",
+    descriptions: {
+      5: {
+        title: "투자판단 직접 영향 (행동: 원문 정독 + 검증)",
+        text: "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다."
+      },
+      4: {
+        title: "섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)",
+        text: "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보나 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다."
+      },
+      3: {
+        title: "참고 자료 (행동: 요약만 저장)",
+        text: "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다."
+      },
+      2: {
+        title: "낮은 우선순위 (행동: 링크만 보관)",
+        text: "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다."
+      },
+      1: {
+        title: "저장 가치 낮음 (행동: 폐기 가능)",
+        text: "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
+      }
+    }
+  },
+  read_priority: {
+    title: "정독 우선순위 (Read Priority)",
+    icon: "📖",
+    descriptions: {
+      5: {
+        title: "즉각 원문 완독 필수 (원문 100% 정독)",
+        text: "요약본만으로는 누락되는 행간의 의미나 기술적 세부사항이 매우 중요하므로, 즉시 시간을 할애하여 원문 전체를 깊게 정독해야 하는 최고 순위 자료입니다."
+      },
+      4: {
+        title: "핵심 챕터 정독 (원문 50% 부분독)",
+        text: "서론/결론과 핵심적인 장표, 수치 테이블이 포함된 핵심 문단 위주로 완독하는 것이 효율적입니다. 나머지 부분은 요약본으로 대체 가능합니다."
+      },
+      3: {
+        title: "요약본 정독으로 충분 (요약본 100% 정독)",
+        text: "원문에 장황한 수식어나 배경 설명이 많아 굳이 원문까지 갈 필요 없이, 제공된 상세 AI 요약본만 집중해서 읽어도 핵심 파악에 무리가 없습니다."
+      },
+      2: {
+        title: "가벼운 스캔 및 인덱싱 (요약본 20% 스캔)",
+        text: "정독할 가치는 낮으며, 어떤 내용인지 주요 키워드와 결론만 가볍게 훑어보고 인덱싱 처리하여 검색 가능하게 보관합니다."
+      },
+      1: {
+        title: "제목/결론만 확인 (요약본 10% 확인)",
+        text: "원문이나 요약본을 읽을 필요가 전혀 없으며, 제목과 업종 키워드만 파악하여 보관함에 집어넣는 용도입니다."
+      }
+    }
+  },
+  verification_need: {
+    title: "검증 필요성 (Verification Need)",
+    icon: "🛡️",
+    descriptions: {
+      5: {
+        title: "교차 검증 및 사실 확인 극도 요망",
+        text: "리포트의 주장이나 추정 수치(Capex, 가동률, 단가 등)가 공격적이거나 자극적입니다. 공시 보고서나 IR 자료, 실제 재무제표를 바탕으로 원자료를 직접 찾아 검증하고 더블 체크해야 합니다."
+      },
+      4: {
+        title: "작성자 편향 및 추정 가정 검토 필요",
+        text: "애널리스트나 유튜버의 주관적 정성 평가가 가득 차 있어 편향의 여지가 큽니다. 다른 경쟁 리포트나 상반된 의견의 글들과 교차 대조가 필요합니다."
+      },
+      3: {
+        title: "일반적 컨센서스 수준 (수치 확인 필요)",
+        text: "일반적으로 널리 받아들여지는 컨센서스 데이터이므로 특별한 의구심은 필요 없으나, 실적 예측 모델에 입력할 때 주요 수치들의 일치 여부만 가볍게 확인합니다."
+      },
+      2: {
+        title: "기초 팩트 기반 (검증 불필요)",
+        text: "이미 검증이 완료된 산업 통계 수치, 정부 발표 공식 지표, 기업 공시 원문 등을 그대로 발췌한 리포트로 추가적인 진위 검증이 불필요합니다."
+      },
+      1: {
+        title: "순수 이론/개념 자료 (검증 대상 없음)",
+        text: "가치판단이나 추정 수치가 들어가지 않은 교육용 원리 설명, 일반 지식 콘텐츠로 검증할 정량 데이터가 전혀 없는 서술적 자료입니다."
+      }
+    }
+  }
+};
+
 interface MemoEditorProps {
   report: StructuredReport | null; // null if creating a new one
   onSave: (report: StructuredReport) => void;
@@ -448,6 +529,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   // Multi-dimensional rating fields state
   const [readPriority, setReadPriority] = useState<number>(3);
   const [verificationNeed, setVerificationNeed] = useState<number>(2);
+  const [activeExplainTab, setActiveExplainTab] = useState<'importance' | 'read_priority' | 'verification_need'>('importance');
   const [notionSave, setNotionSave] = useState<string>("보류");
   const [recommendedAction, setRecommendedAction] = useState<string>("요약만 저장");
   const [scoreRationale, setScoreRationale] = useState<string>("");
@@ -1497,8 +1579,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 ))}
               </div>
             </div>
-
-            {/* Sectors / Tags */}
             <div className="col-span-1 md:col-span-2 space-y-2">
               <label className="text-xs font-semibold text-gray-500">투자 섹터 / 태그 (Sectors & Tags)</label>
               <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 border border-slate-200 rounded-lg min-h-[42px] items-center">
@@ -1585,29 +1665,40 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                   <span>스마트 다차원 리포트 등급 평가 (Smart Rating)</span>
                 </label>
                 <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
-                  3단계 가중 레이팅 시스템
+                  3단계 가중 레이팅 시스템 • 각 영역을 클릭하여 설명 보기
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50/40 border border-gray-150 p-5 rounded-2xl">
                 {/* Row 1: Importance Star Selection */}
-                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                <div 
+                  onClick={() => setActiveExplainTab('importance')}
+                  className={`space-y-1.5 bg-white p-3.5 rounded-xl border flex flex-col justify-between shadow-sm cursor-pointer transition-all ${
+                    activeExplainTab === 'importance'
+                      ? "border-amber-500 ring-2 ring-amber-100/70"
+                      : "border-gray-100 hover:border-gray-300"
+                  }`}
+                >
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1.5">
                       <span>⭐️</span>
                       <span>투자 중요도 (Importance)</span>
+                      {activeExplainTab === 'importance' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
                     </label>
-                    <p className="text-[10px] text-gray-405 leading-tight mt-0.5 min-h-[28px]">
+                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5 min-h-[28px]">
                       보유 종목 연관성 및 아이디어 변화 영향력
                     </p>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((num) => (
                         <button
                           key={num}
                           type="button"
-                          onClick={() => setImportance(num)}
+                          onClick={() => {
+                            setImportance(num);
+                            setActiveExplainTab('importance');
+                          }}
                           className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                         >
                           <span className={num <= importance ? "text-amber-500 font-bold" : "text-gray-200"}>
@@ -1623,23 +1714,34 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 </div>
 
                 {/* Row 2: Read Priority Star Selection */}
-                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                <div 
+                  onClick={() => setActiveExplainTab('read_priority')}
+                  className={`space-y-1.5 bg-white p-3.5 rounded-xl border flex flex-col justify-between shadow-sm cursor-pointer transition-all ${
+                    activeExplainTab === 'read_priority'
+                      ? "border-indigo-500 ring-2 ring-indigo-100/70"
+                      : "border-gray-100 hover:border-gray-300"
+                  }`}
+                >
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1.5">
                       <span>📖</span>
                       <span>원문 정독 우선순위 (Read Priority)</span>
+                      {activeExplainTab === 'read_priority' && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
                     </label>
-                    <p className="text-[10px] text-gray-405 leading-tight mt-0.5 min-h-[28px]">
+                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5 min-h-[28px]">
                       요약만으로 충분한지, 원문 완독이 필요한지 여부
                     </p>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((num) => (
                         <button
                           key={num}
                           type="button"
-                          onClick={() => setReadPriority(num)}
+                          onClick={() => {
+                            setReadPriority(num);
+                            setActiveExplainTab('read_priority');
+                          }}
                           className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                         >
                           <span className={num <= readPriority ? "text-indigo-600 font-bold" : "text-gray-200"}>
@@ -1655,23 +1757,34 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 </div>
 
                 {/* Row 3: Verification Need Star Selection */}
-                <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                <div 
+                  onClick={() => setActiveExplainTab('verification_need')}
+                  className={`space-y-1.5 bg-white p-3.5 rounded-xl border flex flex-col justify-between shadow-sm cursor-pointer transition-all ${
+                    activeExplainTab === 'verification_need'
+                      ? "border-emerald-500 ring-2 ring-emerald-100/70"
+                      : "border-gray-100 hover:border-gray-300"
+                  }`}
+                >
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-gray-600 block flex items-center gap-1.5">
                       <span>🛡️</span>
                       <span>팩트 검증 필요성 (Verification Need)</span>
+                      {activeExplainTab === 'verification_need' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
                     </label>
-                    <p className="text-[10px] text-gray-455 leading-tight mt-0.5 min-h-[28px]">
+                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5 min-h-[28px]">
                       실적/Capex 등 치명적인 재무 수치 검증 요구도
                     </p>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((num) => (
                         <button
                           key={num}
                           type="button"
-                          onClick={() => setVerificationNeed(num)}
+                          onClick={() => {
+                            setVerificationNeed(num);
+                            setActiveExplainTab('verification_need');
+                          }}
                           className="text-xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                         >
                           <span className={num <= verificationNeed ? "text-emerald-600 font-bold" : "text-gray-200"}>
@@ -1684,6 +1797,95 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                       {verificationNeed}점
                     </span>
                   </div>
+                </div>
+
+                {/* Dynamic Rating Guidelines explanation block */}
+                <div className="col-span-1 md:col-span-3">
+                  {(() => {
+                    const currentScore = activeExplainTab === 'importance' ? importance : activeExplainTab === 'read_priority' ? readPriority : verificationNeed;
+                    const currentExplanation = ratingExplanations[activeExplainTab];
+                    const activeDescription = currentExplanation.descriptions[currentScore as 1|2|3|4|5] || currentExplanation.descriptions[3];
+                    const themeColor = activeExplainTab === 'importance' ? 'amber' : activeExplainTab === 'read_priority' ? 'indigo' : 'emerald';
+                    
+                    const themeClasses = {
+                      amber: {
+                        bg: "bg-amber-50/40 border-amber-100",
+                        badge: "bg-amber-100 text-amber-800 border-amber-200/50",
+                        text: "text-amber-900"
+                      },
+                      indigo: {
+                        bg: "bg-indigo-50/40 border-indigo-100",
+                        badge: "bg-indigo-100 text-indigo-800 border-indigo-200/50",
+                        text: "text-indigo-900"
+                      },
+                      emerald: {
+                        bg: "bg-emerald-50/40 border-emerald-100",
+                        badge: "bg-emerald-100 text-emerald-800 border-emerald-200/50",
+                        text: "text-emerald-900"
+                      }
+                    }[themeColor];
+
+                    return (
+                      <div className={`border p-4 rounded-xl transition-all duration-300 ${themeClasses.bg}`}>
+                        <div className="flex items-center justify-between mb-2.5">
+                          <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                            <span>{currentExplanation.icon}</span>
+                            <span>{currentExplanation.title} 실시간 가이드 (클릭하여 즉시 점수 부여)</span>
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] border ${themeClasses.badge}`}>
+                            선택한 점수: {currentScore}점
+                          </span>
+                        </div>
+
+                        {/* Explanatory Spectrum Slider/Grid */}
+                        <div className="grid grid-cols-5 gap-1.5 mb-3.5">
+                          {[5, 4, 3, 2, 1].map((level) => {
+                            const isCurrent = level === currentScore;
+                            const levelData = currentExplanation.descriptions[level as 1|2|3|4|5];
+                            return (
+                              <button
+                                key={level}
+                                type="button"
+                                onClick={() => {
+                                  if (activeExplainTab === 'importance') setImportance(level);
+                                  else if (activeExplainTab === 'read_priority') setReadPriority(level);
+                                  else setVerificationNeed(level);
+                                }}
+                                className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
+                                  isCurrent 
+                                    ? activeExplainTab === 'importance'
+                                      ? "bg-amber-500 text-white border-amber-500 font-bold shadow-xs scale-102"
+                                      : activeExplainTab === 'read_priority'
+                                      ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs scale-102"
+                                      : "bg-emerald-600 text-white border-emerald-600 font-bold shadow-xs scale-102"
+                                    : "bg-white border-slate-100 text-slate-500 hover:border-slate-300"
+                                }`}
+                                title={levelData.title}
+                              >
+                                <span className="block text-[11px] font-extrabold">{level}점</span>
+                                <span className="block text-[8px] opacity-90 truncate hidden sm:block font-medium">
+                                  {levelData.title.split(" (")[0]}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Active Selected Rating Detail text */}
+                        <div className="bg-white/95 border border-slate-100 p-3.5 rounded-lg text-[11px] leading-relaxed">
+                          <p className="font-extrabold text-slate-800 mb-1 flex items-center gap-1.5">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                              activeExplainTab === 'importance' ? 'bg-amber-500' : activeExplainTab === 'read_priority' ? 'bg-indigo-600' : 'bg-emerald-600'
+                            }`}></span>
+                            <span>{currentScore}점 - {activeDescription.title}</span>
+                          </p>
+                          <p className="text-slate-600 font-medium">
+                            {activeDescription.text}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Notion Save Radio Block */}

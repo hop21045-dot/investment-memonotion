@@ -97,6 +97,87 @@ function parseMarkdownToHtml(markdown: string): string {
   return processedLines.filter(line => line !== "").join("\n");
 }
 
+const ratingExplanations = {
+  importance: {
+    title: "투자 중요도 (Importance)",
+    icon: "⭐️",
+    descriptions: {
+      5: {
+        title: "투자판단 직접 영향 (행동: 원문 정독 + 검증)",
+        text: "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다."
+      },
+      4: {
+        title: "섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)",
+        text: "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보나 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다."
+      },
+      3: {
+        title: "참고 자료 (행동: 요약만 저장)",
+        text: "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다."
+      },
+      2: {
+        title: "낮은 우선순위 (행동: 링크만 보관)",
+        text: "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다."
+      },
+      1: {
+        title: "저장 가치 낮음 (행동: 폐기 가능)",
+        text: "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
+      }
+    }
+  },
+  read_priority: {
+    title: "정독 우선순위 (Read Priority)",
+    icon: "📖",
+    descriptions: {
+      5: {
+        title: "즉각 원문 완독 필수 (원문 100% 정독)",
+        text: "요약본만으로는 누락되는 행간의 의미나 기술적 세부사항이 매우 중요하므로, 즉시 시간을 할애하여 원문 전체를 깊게 정독해야 하는 최고 순위 자료입니다."
+      },
+      4: {
+        title: "핵심 챕터 정독 (원문 50% 부분독)",
+        text: "서론/결론과 핵심적인 장표, 수치 테이블이 포함된 핵심 문단 위주로 완독하는 것이 효율적입니다. 나머지 부분은 요약본으로 대체 가능합니다."
+      },
+      3: {
+        title: "요약본 정독으로 충분 (요약본 100% 정독)",
+        text: "원문에 장황한 수식어나 배경 설명이 많아 굳이 원문까지 갈 필요 없이, 제공된 상세 AI 요약본만 집중해서 읽어도 핵심 파악에 무리가 없습니다."
+      },
+      2: {
+        title: "가벼운 스캔 및 인덱싱 (요약본 20% 스캔)",
+        text: "정독할 가치는 낮으며, 어떤 내용인지 주요 키워드와 결론만 가볍게 훑어보고 인덱싱 처리하여 검색 가능하게 보관합니다."
+      },
+      1: {
+        title: "제목/결론만 확인 (요약본 10% 확인)",
+        text: "원문이나 요약본을 읽을 필요가 전혀 없으며, 제목과 업종 키워드만 파악하여 보관함에 집어넣는 용도입니다."
+      }
+    }
+  },
+  verification_need: {
+    title: "검증 필요성 (Verification Need)",
+    icon: "🛡️",
+    descriptions: {
+      5: {
+        title: "교차 검증 및 사실 확인 극도 요망",
+        text: "리포트의 주장이나 추정 수치(Capex, 가동률, 단가 등)가 공격적이거나 자극적입니다. 공시 보고서나 IR 자료, 실제 재무제표를 바탕으로 원자료를 직접 찾아 검증하고 더블 체크해야 합니다."
+      },
+      4: {
+        title: "작성자 편향 및 추정 가정 검토 필요",
+        text: "애널리스트나 유튜버의 주관적 정성 평가가 가득 차 있어 편향의 여지가 큽니다. 다른 경쟁 리포트나 상반된 의견의 글들과 교차 대조가 필요합니다."
+      },
+      3: {
+        title: "일반적 컨센서스 수준 (수치 확인 필요)",
+        text: "일반적으로 널리 받아들여지는 컨센서스 데이터이므로 특별한 의구심은 필요 없으나, 실적 예측 모델에 입력할 때 주요 수치들의 일치 여부만 가볍게 확인합니다."
+      },
+      2: {
+        title: "기초 팩트 기반 (검증 불필요)",
+        text: "이미 검증이 완료된 산업 통계 수치, 정부 발표 공식 지표, 기업 공시 원문 등을 그대로 발췌한 리포트로 추가적인 진위 검증이 불필요합니다."
+      },
+      1: {
+        title: "순수 이론/개념 자료 (검증 대상 없음)",
+        text: "가치판단이나 추정 수치가 들어가지 않은 교육용 원리 설명, 일반 지식 콘텐츠로 검증할 정량 데이터가 전혀 없는 서술적 자료입니다."
+      }
+    }
+  }
+};
+
 interface MemoDetailProps {
   report: StructuredReport | null;
   onEdit: () => void;
@@ -111,6 +192,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
   const [reEvaluateError, setReEvaluateError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  const [activeRatingTab, setActiveRatingTab] = useState<'importance' | 'read_priority' | 'verification_need'>('importance');
 
 
   // Reset delete confirmation when active report changes
@@ -1043,40 +1125,178 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                 )}
               </div>
 
+              {/* Grid of Clickable Rating Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Importance */}
-                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-400 font-bold">투자 중요도 (Importance)</span>
-                  <div className="flex items-center justify-between mt-1">
-                    {renderStars(report.rating?.importance !== undefined ? report.rating.importance : report.importance)}
-                    <span className="text-[11px] font-bold text-slate-800">
-                      {report.rating?.importance !== undefined ? report.rating.importance : (report.importance || 0)}점
-                    </span>
-                  </div>
-                </div>
+                {/* Importance Card */}
+                {(() => {
+                  const score = report.rating?.importance !== undefined ? report.rating.importance : (report.importance || 0);
+                  const isActive = activeRatingTab === 'importance';
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setActiveRatingTab('importance')}
+                      className={`text-left bg-white p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                        isActive 
+                          ? "border-amber-500 ring-2 ring-amber-100/70 shadow-sm" 
+                          : "border-slate-100 hover:border-slate-300 hover:shadow-xs"
+                      }`}
+                    >
+                      <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                        <span>⭐️ 투자 중요도</span>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                      </span>
+                      <div className="flex items-center justify-between mt-1 w-full">
+                        {renderStars(score)}
+                        <span className="text-[11px] font-bold text-slate-800">
+                          {score}점
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })()}
 
-                {/* Read Priority */}
-                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-400 font-bold">정독 우선순위 (Read Priority)</span>
-                  <div className="flex items-center justify-between mt-1">
-                    {renderStars(report.rating?.read_priority || 3)}
-                    <span className="text-[11px] font-bold text-indigo-650">
-                      {report.rating?.read_priority || 3}점
-                    </span>
-                  </div>
-                </div>
+                {/* Read Priority Card */}
+                {(() => {
+                  const score = report.rating?.read_priority !== undefined ? report.rating.read_priority : 3;
+                  const isActive = activeRatingTab === 'read_priority';
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setActiveRatingTab('read_priority')}
+                      className={`text-left bg-white p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                        isActive 
+                          ? "border-indigo-500 ring-2 ring-indigo-100/70 shadow-sm" 
+                          : "border-slate-100 hover:border-slate-300 hover:shadow-xs"
+                      }`}
+                    >
+                      <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                        <span>📖 정독 우선순위</span>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
+                      </span>
+                      <div className="flex items-center justify-between mt-1 w-full">
+                        {renderStars(score)}
+                        <span className="text-[11px] font-bold text-indigo-650">
+                          {score}점
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })()}
 
-                {/* Verification Need */}
-                <div className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-400 font-bold">검증 필요성 (Verification Need)</span>
-                  <div className="flex items-center justify-between mt-1">
-                    {renderStars(report.rating?.verification_need || (report.verified === "O" ? 4 : 2))}
-                    <span className="text-[11px] font-bold text-emerald-650">
-                      {report.rating?.verification_need || (report.verified === "O" ? 4 : 2)}점
-                    </span>
-                  </div>
-                </div>
+                {/* Verification Need Card */}
+                {(() => {
+                  const score = report.rating?.verification_need !== undefined ? report.rating.verification_need : (report.verified === "O" ? 4 : 2);
+                  const isActive = activeRatingTab === 'verification_need';
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setActiveRatingTab('verification_need')}
+                      className={`text-left bg-white p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                        isActive 
+                          ? "border-emerald-500 ring-2 ring-emerald-100/70 shadow-sm" 
+                          : "border-slate-100 hover:border-slate-300 hover:shadow-xs"
+                      }`}
+                    >
+                      <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                        <span>🛡️ 검증 필요성</span>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+                      </span>
+                      <div className="flex items-center justify-between mt-1 w-full">
+                        {renderStars(score)}
+                        <span className="text-[11px] font-bold text-emerald-650">
+                          {score}점
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })()}
               </div>
+
+              {/* Dynamic Rating Explanation Section */}
+              {(() => {
+                const currentScore = activeRatingTab === 'importance' 
+                  ? (report.rating?.importance !== undefined ? report.rating.importance : (report.importance || 0))
+                  : activeRatingTab === 'read_priority'
+                  ? (report.rating?.read_priority !== undefined ? report.rating.read_priority : 3)
+                  : (report.rating?.verification_need !== undefined ? report.rating.verification_need : (report.verified === "O" ? 4 : 2));
+
+                const currentExplanation = ratingExplanations[activeRatingTab];
+                const activeDescription = currentExplanation.descriptions[currentScore as 1|2|3|4|5] || currentExplanation.descriptions[3];
+                const themeColor = activeRatingTab === 'importance' ? 'amber' : activeRatingTab === 'read_priority' ? 'indigo' : 'emerald';
+                
+                const themeClasses = {
+                  amber: {
+                    bg: "bg-amber-50/40 border-amber-100",
+                    badge: "bg-amber-100 text-amber-800 border-amber-200/50",
+                    text: "text-amber-900"
+                  },
+                  indigo: {
+                    bg: "bg-indigo-50/40 border-indigo-100",
+                    badge: "bg-indigo-100 text-indigo-800 border-indigo-200/50",
+                    text: "text-indigo-900"
+                  },
+                  emerald: {
+                    bg: "bg-emerald-50/40 border-emerald-100",
+                    badge: "bg-emerald-100 text-emerald-800 border-emerald-200/50",
+                    text: "text-emerald-900"
+                  }
+                }[themeColor];
+
+                return (
+                  <div className={`border p-3.5 rounded-xl transition-all duration-300 ${themeClasses.bg}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                        <span>{currentExplanation.icon}</span>
+                        <span>{currentExplanation.title} 점수별 안내</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] border ${themeClasses.badge}`}>
+                        현재 보고서 평가: {currentScore}점
+                      </span>
+                    </div>
+
+                    {/* Explanatory Spectrum Slider/Grid */}
+                    <div className="grid grid-cols-5 gap-1 mb-3">
+                      {[5, 4, 3, 2, 1].map((level) => {
+                        const isCurrent = level === currentScore;
+                        const levelData = currentExplanation.descriptions[level as 1|2|3|4|5];
+                        return (
+                          <div
+                            key={level}
+                            className={`p-1.5 rounded-lg border text-center transition-all ${
+                              isCurrent 
+                                ? activeRatingTab === 'importance'
+                                  ? "bg-amber-500 text-white border-amber-500 font-bold shadow-xs scale-102"
+                                  : activeRatingTab === 'read_priority'
+                                  ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs scale-102"
+                                  : "bg-emerald-600 text-white border-emerald-600 font-bold shadow-xs scale-102"
+                                : "bg-white border-slate-100 text-slate-500 hover:border-slate-300"
+                            }`}
+                            title={levelData.title}
+                          >
+                            <span className="block text-[11px] font-extrabold">{level}점</span>
+                            <span className="block text-[8px] opacity-80 truncate hidden sm:block">
+                              {levelData.title.split(" (")[0]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Active Selected Rating Detail text */}
+                    <div className="bg-white/95 border border-slate-100 p-3 rounded-lg text-[11px] leading-relaxed">
+                      <p className="font-extrabold text-slate-800 mb-1 flex items-center gap-1.5">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                          activeRatingTab === 'importance' ? 'bg-amber-500' : activeRatingTab === 'read_priority' ? 'bg-indigo-600' : 'bg-emerald-600'
+                        }`}></span>
+                        <span>{currentScore}점 - {activeDescription.title}</span>
+                      </p>
+                      <p className="text-slate-650 font-medium">
+                        {activeDescription.text}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Save & Action Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1102,33 +1322,10 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
               </div>
 
               {/* Rationale Text */}
-              {(report.rating?.score_rationale || getImportanceBadgeLabel(report.importance)) && (
+              {report.rating?.score_rationale && (
                 <div className="bg-white border border-slate-100 p-3.5 rounded-xl text-[11px] leading-relaxed font-medium text-slate-600">
-                  <span className="font-bold text-slate-800 block mb-1">💡 평가 및 추천 행동 근거</span>
-                  {report.rating?.score_rationale ? (
-                    <p>{report.rating.score_rationale}</p>
-                  ) : (
-                    <div>
-                      <p className="font-bold text-amber-750 mb-1">
-                        🎯 {
-                          report.importance === 5 ? "투자판단에 직접 영향 (행동: 원문 정독 + 검증)" :
-                          report.importance === 4 ? "섹터/기업 Wiki 반영 후보 (행동: 핵심 부분 정독)" :
-                          report.importance === 3 ? "참고자료 (행동: 요약만 저장)" :
-                          report.importance === 2 ? "흥미는 있으나 낮은 우선순위 (행동: 링크만 보관)" :
-                          "저장 가치 낮음 (행동: 폐기 가능)"
-                        }
-                      </p>
-                      <p className="text-slate-500 leading-relaxed font-medium">
-                        {
-                          report.importance === 5 ? "보유종목과 밀접한 연관이 있고 기존 투자 아이디어나 논리를 완전히 강화 또는 폐기할 수 있는 최고 순위의 자료입니다. 원문을 꼼꼼히 완독하고 수치 및 팩트를 철저히 검증해야 합니다." :
-                          report.importance === 4 ? "향후 산업 생태계나 기업의 Wiki 및 영구 지식 베이스에 추가할 만큼 중요한 정보다 수주, Capex 등이 포함된 핵심 리포트입니다. 중요 부분을 집중적으로 정독합니다." :
-                          report.importance === 3 ? "매일 전개되는 일반적인 뉴스 브리핑, 단순 특징주 소식 등 단기 참고 및 백업용 정보로, 가볍게 요약본만 보관하여 필요 시 검색하는 용도입니다." :
-                          report.importance === 2 ? "새롭거나 흥미로운 주장을 담고 있으나 현재로서는 비즈니스 우선순위가 떨어지는 교육용 개념 리포트 혹은 설명문으로, 링크 위주로 가볍게 저장합니다." :
-                          "정보 가치가 낮거나 중복 축적된 단순 요약본, 신뢰성이 떨어지는 단발성 루머 정보로, 보관 필요성이 낮아 즉시 폐기 가능한 자료입니다."
-                        }
-                      </p>
-                    </div>
-                  )}
+                  <span className="font-bold text-slate-800 block mb-1">💡 AI 평가 및 추천 행동 근거</span>
+                  <p>{report.rating.score_rationale}</p>
                 </div>
               )}
 
