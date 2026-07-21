@@ -305,8 +305,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       ` : '';
 
       return `
-        <div style="margin-bottom: 32px; border-left: 3px solid #cbd5e1; padding-left: 16px; margin-top: 24px;">
-          <h3 style="margin-top: 0; color: #0f172a; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <div class="section-block">
+          <h3 style="margin-top: 0; color: #0f172a; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; page-break-after: avoid; break-after: avoid;">
             <span>SEC ${sIdx + 1}. ${sec.title}</span>
             ${sec.source ? `<span style="font-size: 0.75em; font-weight: normal; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px;">출처: ${sec.source}</span>` : ''}
           </h3>
@@ -350,6 +350,12 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
   <title>${report.title} - InvestInsight Report</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    
+    @page {
+      size: A4;
+      margin: 15mm 15mm 15mm 15mm;
+    }
+
     body {
       font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       color: #1a1a1a;
@@ -357,6 +363,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       line-height: 1.6;
       margin: 0;
       padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     .container {
       max-width: 800px;
@@ -371,6 +379,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       margin-bottom: 24px;
       letter-spacing: -0.02em;
       color: #111111;
+      page-break-after: avoid;
+      break-after: avoid;
     }
     h2 {
       font-size: 1.4em;
@@ -380,6 +390,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-bottom: 1px solid #e2e8f0;
       padding-bottom: 8px;
       color: #111111;
+      page-break-after: avoid;
+      break-after: avoid;
     }
     h3 {
       font-size: 1.15em;
@@ -387,6 +399,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       margin-top: 24px;
       margin-bottom: 12px;
       color: #2d3748;
+      page-break-after: avoid;
+      break-after: avoid;
     }
     p {
       margin-top: 0;
@@ -401,6 +415,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     li {
       margin-bottom: 8px;
       color: #334155;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     blockquote {
       margin: 20px 0;
@@ -410,17 +426,25 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       font-style: italic;
       color: #475569;
       border-radius: 0 8px 8px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 24px 0;
       font-size: 0.9em;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     th, td {
       border: 1px solid #e2e8f0;
       padding: 10px 14px;
       text-align: left;
+    }
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     th {
       background-color: #f8fafc;
@@ -463,6 +487,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-top: 1px solid #e2e8f0;
       border-bottom: 1px solid #e2e8f0;
       font-size: 0.85em;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .property-label {
       color: #64748b;
@@ -481,6 +507,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-radius: 12px;
       padding: 24px;
       margin-bottom: 32px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .summary-title {
       font-size: 0.8em;
@@ -500,16 +528,29 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border: 1px solid;
       margin: 16px 0;
       font-size: 0.9em;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .callout-warning { background-color: #fffbeb; border-color: #fef3c7; color: #78350f; }
     .callout-positive { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
     .callout-risk { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
     
+    .section-block {
+      margin-bottom: 28px;
+      border-left: 3px solid #cbd5e1;
+      padding-left: 16px;
+      margin-top: 24px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
     .investment-dual-grid {
       display: grid;
       grid-template-cols: 1fr 1fr;
       gap: 20px;
       margin: 24px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     @media (max-width: 600px) {
       .investment-dual-grid {
@@ -520,6 +561,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-radius: 12px;
       border: 1px solid;
       padding: 20px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .bull-box { background-color: #f0fdf4; border-color: #dcfce7; }
     .bear-box { background-color: #fef2f2; border-color: #fee2e2; }
@@ -531,10 +574,12 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       letter-spacing: 0.05em;
     }
     
-    /* Print Styles */
+    /* Print Styles for PDF generation / printing */
     @media print {
       body {
         background-color: #ffffff;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .container {
         max-width: 100%;
@@ -542,6 +587,23 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       }
       .no-print {
         display: none !important;
+      }
+      .section-block,
+      .summary-box,
+      .properties-grid,
+      .callout,
+      .investment-box,
+      .investment-dual-grid,
+      table,
+      tr,
+      li {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        break-inside: avoid-page !important;
+      }
+      h1, h2, h3, h4 {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
       }
     }
     
@@ -1465,7 +1527,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
 
           <div className="space-y-8">
             {report.sections.map((sec, sIdx) => (
-              <div key={sec.id || sIdx} className="space-y-3.5 border-l-2 border-gray-200 pl-4 md:pl-5 py-0.5">
+              <div key={sec.id || sIdx} className="section-block space-y-3.5 border-l-2 border-gray-200 pl-4 md:pl-5 py-0.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap">
                   <h4 className="text-base md:text-lg font-bold text-[#1A1A1A] flex items-center gap-2">
                     <span className="text-black font-mono text-[10px] tracking-wider uppercase bg-gray-100 px-2 py-0.5 rounded font-bold">
