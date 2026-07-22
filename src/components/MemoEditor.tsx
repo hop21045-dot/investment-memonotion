@@ -1453,29 +1453,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               </div>
             </div>
 
-            {/* Verification Status */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500">🛡️ 검증 여부</label>
-              <div className="flex gap-2">
-                {(["O", "X"] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setVerified(opt)}
-                    className={`flex-1 py-2 text-xs font-bold border rounded-lg transition-all cursor-pointer ${
-                      verified === opt
-                        ? opt === "O"
-                          ? "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-rose-600 text-white border-rose-600"
-                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {opt === "O" ? "O (검증됨)" : "X (미검증)"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Status Selection */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-500">⚙️ 상태 (Status)</label>
@@ -1491,42 +1468,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                      st === "검증중" ? "⚙️ 검증중" :
                      st === "검증완료" ? "✅ 검증완료" :
                      "📚 Wiki반영"}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Action Item Selection */}
-            <div className="col-span-1 md:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-gray-500">🎯 액션 (Action)</label>
-              <select
-                value={action}
-                onChange={(e) => setAction(e.target.value as any)}
-                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-white font-medium cursor-pointer"
-              >
-                {[
-                  "",
-                  "1차 요약 필요",
-                  "원문 정독",
-                  "원문 검증 필요",
-                  "ChatGPT 검증 대기",
-                  "Wiki 반영 후보",
-                  "Wiki 반영 필요",
-                  "트래커 업데이트 필요",
-                  "보류",
-                  "폐기"
-                ].map((act) => (
-                  <option key={act} value={act}>
-                    {act === "" ? "선택 안함 (공란)" :
-                     act === "1차 요약 필요" ? "📌 1차 요약 필요" :
-                     act === "원문 정독" ? "📖 원문 정독" :
-                     act === "원문 검증 필요" ? "🧐 원문 검증 필요" :
-                     act === "ChatGPT 검증 대기" ? "🤖 ChatGPT 검증 대기" :
-                     act === "Wiki 반영 후보" ? "🌟 Wiki 반영 후보" :
-                     act === "Wiki 반영 필요" ? "📢 Wiki 반영 필요" :
-                     act === "트래커 업데이트 필요" ? "📊 트래커 업데이트 필요" :
-                     act === "보류" ? "⏸️ 보류" :
-                     "🗑️ 폐기"}
                   </option>
                 ))}
               </select>

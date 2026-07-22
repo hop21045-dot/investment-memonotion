@@ -82,40 +82,53 @@ body {
     display: block !important;
   }
 
-  /* Prevent awkward mid-element page cuts: push whole blocks to next page cleanly */
-  #box-metadata,
-  #box-summary, 
-  #box-keypoints, 
-  #box-sections, 
+  /* Page break rules for clean PDF and browser print output */
+  #box-sections,
+  #box-keypoints,
   #box-investment-view,
+  #box-metadata,
   .section-block,
+  .investment-dual-grid,
+  #document-body,
+  table,
+  ul,
+  ol,
+  .markdown-body {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Prevent atomic UI components from splitting through the middle */
   .callout,
   .investment-box,
-  .investment-dual-grid,
-  #investment-neutral,
-  #investment-disclaimer,
+  .summary-box,
+  .properties-grid,
   .markdown-body blockquote,
-  .overflow-x-auto,
-  table,
   tr,
-  li {
+  figure,
+  img {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     break-inside: avoid-page !important;
   }
 
-  /* Keep headings attached to subsequent content */
-  h1, h2, h3, h4, h5, h6 {
+  /* Keep headings strictly attached to the content immediately below them */
+  h1, h2, h3, h4, h5, h6,
+  .summary-title,
+  .investment-box-title {
     page-break-after: avoid !important;
     break-after: avoid !important;
     break-after: avoid-page !important;
   }
 
+  p, li {
+    orphans: 2;
+    widows: 2;
+  }
+
   .section-block {
     margin-top: 20px !important;
     margin-bottom: 24px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 }
 

@@ -434,8 +434,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-collapse: collapse;
       margin: 24px 0;
       font-size: 0.9em;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: auto;
+      break-inside: auto;
     }
     th, td {
       border: 1px solid #e2e8f0;
@@ -540,8 +540,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       border-left: 3px solid #cbd5e1;
       padding-left: 16px;
       margin-top: 24px;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: auto;
+      break-inside: auto;
     }
 
     .investment-dual-grid {
@@ -549,8 +549,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       grid-template-cols: 1fr 1fr;
       gap: 20px;
       margin: 24px 0;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: auto;
+      break-inside: auto;
     }
     @media (max-width: 600px) {
       .investment-dual-grid {
@@ -572,6 +572,8 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       margin-top: 0;
       margin-bottom: 12px;
       letter-spacing: 0.05em;
+      page-break-after: avoid;
+      break-after: avoid;
     }
     
     /* Print Styles for PDF generation / printing */
@@ -588,22 +590,33 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       .no-print {
         display: none !important;
       }
-      .section-block,
       .summary-box,
       .properties-grid,
       .callout,
       .investment-box,
-      .investment-dual-grid,
-      table,
       tr,
-      li {
+      blockquote {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         break-inside: avoid-page !important;
       }
-      h1, h2, h3, h4 {
+      .section-block,
+      .investment-dual-grid,
+      table,
+      ul,
+      ol {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      h1, h2, h3, h4, h5, h6,
+      .summary-title,
+      .investment-box-title {
         page-break-after: avoid !important;
         break-after: avoid !important;
+      }
+      p, li {
+        orphans: 2;
+        widows: 2;
       }
     }
     
@@ -654,21 +667,9 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       <div class="property-label">📅 정리 일자</div>
       <div class="property-value">${report.date}</div>
       
-      <div class="property-label">🛡️ 검증 여부</div>
-      <div class="property-value">
-        <span class="badge ${report.verified === "O" ? "badge-verified-o" : "badge-verified-x"}">
-          ${report.verified === "O" ? "O (검증완료)" : "X (미검증)"}
-        </span>
-      </div>
-      
       <div class="property-label">⚙️ 상태</div>
       <div class="property-value">
         <span class="badge badge-status">${report.status || "요약완료"}</span>
-      </div>
-      
-      <div class="property-label">🎯 액션</div>
-      <div class="property-value">
-        <span class="badge badge-action">${report.action || "선택 안함"}</span>
       </div>
       
       <div class="property-label">⭐️ 중요도 등급</div>
@@ -1135,36 +1136,10 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
 
             <div className="flex items-start gap-4">
               <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-0.5">
-                🛡️ 검증 여부
-              </span>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded border text-[11px] font-bold ${
-                report.verified === "O"
-                  ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
-                  : "bg-rose-50 border-rose-200/50 text-rose-700"
-              }`}>
-                {report.verified === "O" ? "O (검증완료)" : "X (미검증)"}
-              </span>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-0.5">
                 ⚙️ 상태
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded border text-[11px] font-bold bg-slate-55 border-slate-200 text-slate-700">
                 {report.status || "요약완료"}
-              </span>
-            </div>
-
-            <div className="flex items-start gap-4 col-span-1 md:col-span-2">
-              <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-0.5">
-                🎯 액션
-              </span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-extrabold shadow-xs ${
-                report.action
-                  ? "bg-indigo-50/70 border-indigo-200 text-indigo-700"
-                  : "bg-gray-50 border-gray-200 text-gray-400 font-medium"
-              }`}>
-                {report.action || "선택 안함 (공란)"}
               </span>
             </div>
 
@@ -1378,7 +1353,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                 <div className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-xl text-xs font-semibold text-slate-700">
                   <span className="text-slate-400">🎯 추천 후속 액션</span>
                   <span className="bg-indigo-50 border border-indigo-150 text-indigo-700 px-2.5 py-0.5 rounded-md font-bold text-[11px]">
-                    {report.rating?.recommended_action || report.action || "요약만 저장"}
+                    {report.rating?.recommended_action || "요약만 저장"}
                   </span>
                 </div>
               </div>

@@ -181,18 +181,6 @@ export default function MemoList({
     );
   };
 
-  const getVerifiedBadge = (verified?: "O" | "X") => {
-    if (!verified) return null;
-    const isO = verified === "O";
-    return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[9px] font-bold ${
-        isO ? "bg-emerald-50 border-emerald-200/50 text-emerald-700" : "bg-rose-50 border-rose-200/50 text-rose-700"
-      }`}>
-        {isO ? "🛡️ 검증됨" : "🛡️ 미검증"}
-      </span>
-    );
-  };
-
   const getStatusColorBadge = (status?: string) => {
     if (!status) return null;
     const colors: { [key: string]: string } = {
@@ -536,7 +524,6 @@ export default function MemoList({
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-2.5 items-center">
                   {getImportanceBadge(imp)}
-                  {getVerifiedBadge(report.verified)}
                   {getStatusColorBadge(report.status)}
                   {report.sectors && report.sectors.length > 0 && (
                     report.sectors.map((sec, idx) => (
