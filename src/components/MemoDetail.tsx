@@ -881,9 +881,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
         md += `${sec.content}\n\n`;
       }
 
-      if (sec.quote && sec.quote.text) {
-        md += `> "${sec.quote.text}"\n> — *${sec.quote.author}*\n\n`;
-      }
       if (sec.table && sec.table.headers && sec.table.headers.length > 0) {
         md += `| ${sec.table.headers.join(" | ")} |\n`;
         md += `| ${sec.table.headers.map(() => "---").join(" | ")} |\n`;
@@ -891,15 +888,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
           md += `| ${row.join(" | ")} |\n`;
         });
         md += `\n`;
-      }
-      if (sec.callout && sec.callout.text) {
-        const emoji =
-          sec.callout.type === "positive"
-            ? "✅"
-            : (sec.callout.type === "negative" || sec.callout.type === "risk")
-            ? "❌"
-            : "⚠️";
-        md += `> **${emoji}** ${sec.callout.text}\n\n`;
       }
     });
 
@@ -927,27 +915,15 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       md += `\n`;
     }
 
-    md += `### 🔍 언급 종목 및 섹터\n`;
-    if (report.investmentView.mentionedAssets && report.investmentView.mentionedAssets.length > 0) {
-      md += `| 종목·섹터 | 관계 | 맥락 |\n`;
-      md += `| --- | --- | --- |\n`;
-      report.investmentView.mentionedAssets.forEach((asset) => {
-        md += `| ${asset.asset} | ${asset.relation} | ${asset.context} |\n`;
-      });
-    } else {
-      md += `언급된 종목이 없습니다.\n`;
+    if (report.oneLineConclusion) {
+      md += `## 💬 한 줄 결론\n${report.oneLineConclusion}\n\n`;
     }
-    md += `\n`;
 
-    md += `### 🟢 강세 논거 (Bull Thesis)\n`;
-    report.investmentView.bullArguments.forEach((arg) => (md += `- ${arg}\n`));
-    md += `\n`;
-
-    md += `### 🔴 주의 및 반론 (Bear Risks & Caveats)\n`;
-    report.investmentView.caveats.forEach((arg) => (md += `- ${arg}\n`));
-    md += `\n`;
-
-    md += `### ⚖️ 중립적 종합 평가\n${report.investmentView.neutralEvaluation}\n\n`;
+    if (report.checklist && report.checklist.length > 0) {
+      md += `## ☑️ 투자 검증 체크리스트\n`;
+      report.checklist.forEach(item => md += `- [x] ${item}\n`);
+      md += `\n`;
+    }
 
     if (report.editorSynthesis) {
       md += `## ✍️ 에디터 종합 판단\n`;
@@ -1590,18 +1566,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                   )}
                 </div>
 
-                {/* Optional Quote */}
-                {sec.quote && sec.quote.text && (
-                  <div className="bg-gray-50/50 border-l-2 border-black pl-4 py-2.5 my-3 rounded-r-lg">
-                    <p className="text-sm text-gray-800 italic font-medium leading-relaxed">
-                      "{sec.quote.text}"
-                    </p>
-                    <span className="block text-xs text-gray-550 font-bold mt-1.5 text-right">
-                      — {sec.quote.author}
-                    </span>
-                  </div>
-                )}
-
                 {/* Optional Table */}
                 {sec.table && sec.table.headers && sec.table.headers.length > 0 && (
                   <div className="overflow-x-auto border border-gray-200 rounded-lg my-4 bg-white">
@@ -1706,127 +1670,74 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
             </div>
           )}
 
-          {/* 언급 종목 및 섹터 */}
-          <div className="space-y-2.5">
-            <h4 className="text-[11px] font-bold text-gray-450 uppercase tracking-widest">
-              🔎 언급 종목 및 섹터
-            </h4>
-            {report.investmentView.mentionedAssets && report.investmentView.mentionedAssets.length > 0 ? (
-              <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
-                <table className="min-w-full divide-y divide-gray-200 text-xs md:text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-bold text-black border-r border-gray-200 last:border-r-0">종목·섹터</th>
-                      <th className="px-4 py-2 text-left font-bold text-black border-r border-gray-200 last:border-r-0">관계</th>
-                      <th className="px-4 py-2 text-left font-bold text-black border-r border-gray-200 last:border-r-0">맥락 (Context)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {report.investmentView.mentionedAssets.map((asset, aIdx) => (
-                      <tr key={aIdx} className="hover:bg-gray-50/20 transition-colors">
-                        <td className="px-4 py-2.5 font-bold text-[#1A1A1A] whitespace-nowrap border-r border-gray-200 last:border-r-0">
-                          {asset.asset}
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap border-r border-gray-200 last:border-r-0">
-                          <span className="bg-black/5 text-black border border-black/10 text-[10px] font-bold px-2.5 py-1 rounded">
-                            {asset.relation}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-700 leading-relaxed text-xs border-r border-gray-200 last:border-r-0">
-                          {asset.context}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* 맨 마지막: 1. 한 줄 결론 -> 2. 투자 검증 체크리스트 -> 3. 에디터 종합 판단 */}
+          <div className="space-y-6 pt-6 border-t border-gray-200" id="box-final-conclusions">
+            {/* 1. 한 줄 결론 (One-Line Conclusion) */}
+            {report.oneLineConclusion && (
+              <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-l-4 border-amber-500 p-4.5 rounded-r-xl shadow-2xs">
+                <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  💬 한 줄 결론 (Bottom Line)
+                </span>
+                <p className="text-sm md:text-base font-bold text-slate-900 leading-relaxed">
+                  {report.oneLineConclusion}
+                </p>
               </div>
-            ) : (
-              <p className="text-xs text-gray-450">분석된 관련 종목이 없습니다.</p>
+            )}
+
+            {/* 2. 투자 검증 체크리스트 (Checklist) */}
+            {report.checklist && report.checklist.length > 0 && (
+              <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 space-y-3">
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  투자 검증 체크리스트 (Checklist)
+                </h3>
+                <div className="space-y-2">
+                  {report.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5 text-xs md:text-sm text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                      <span className="text-emerald-600 font-bold mt-0.5">☑️</span>
+                      <span className="leading-relaxed font-medium">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. 에디터 종합 판단 (Editor Synthesis) */}
+            {report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) && (
+              <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-5 space-y-3.5">
+                <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-200/60 pb-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  {report.editorSynthesis.title || "에디터 종합 판단 (Editor Synthesis)"}
+                </h3>
+                {report.editorSynthesis.summary && (
+                  <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                    {report.editorSynthesis.summary}
+                  </p>
+                )}
+                {report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
+                      🔍 주요 비교 및 대조 포인트
+                    </span>
+                    <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm text-slate-700">
+                      {report.editorSynthesis.comparisons.map((cmp, idx) => (
+                        <li key={idx} className="leading-relaxed">{cmp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {report.editorSynthesis.portfolioImplication && (
+                  <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100/80 text-xs md:text-sm text-indigo-950 shadow-2xs">
+                    <span className="font-bold text-indigo-800 block mb-1 flex items-center gap-1">
+                      💼 포트폴리오 대응 및 함의
+                    </span>
+                    <span className="leading-relaxed">{report.editorSynthesis.portfolioImplication}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-
-          {/* Bull vs Caveats Dual Column */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-            {/* Bull thesis */}
-            <div className="bg-emerald-50/20 border border-emerald-150/50 rounded-xl p-5 space-y-2.5">
-              <h4 className="text-[11px] font-bold text-emerald-850 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                🟢 강세 논거 (Bull Thesis)
-              </h4>
-              <ul className="space-y-1.5 text-xs md:text-sm text-gray-800">
-                {report.investmentView.bullArguments.map((arg, idx) => (
-                  <li key={idx} className="flex gap-2 items-start leading-relaxed font-medium">
-                    <span className="text-emerald-500 font-bold mt-0.5">+</span>
-                    <span>{arg}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Caveats */}
-            <div className="bg-rose-50/20 border border-rose-150/50 rounded-xl p-5 space-y-2.5">
-              <h4 className="text-[11px] font-bold text-rose-850 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                🔴 주의 및 반론 (Bear Risks)
-              </h4>
-              <ul className="space-y-1.5 text-xs md:text-sm text-gray-800">
-                {(report.investmentView.caveats && report.investmentView.caveats.length > 0
-                  ? report.investmentView.caveats
-                  : report.investmentView.risks || []
-                ).map((arg, idx) => (
-                  <li key={idx} className="flex gap-2 items-start leading-relaxed font-medium">
-                    <span className="text-rose-500 font-bold mt-0.5">-</span>
-                    <span>{arg}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Neutral Evaluation */}
-          <div className="space-y-2" id="investment-neutral">
-            <h4 className="text-[11px] font-bold text-gray-450 uppercase tracking-widest">
-              ⚖️ 중립적 종합 평가 (Neutral Assessment)
-            </h4>
-            <div className="markdown-body text-sm text-gray-700 leading-relaxed font-medium prose max-w-none">
-              <ReactMarkdown>{report.investmentView.neutralEvaluation}</ReactMarkdown>
-            </div>
-          </div>
-
-          {/* 에디터 종합 판단 (Editor Synthesis) */}
-          {report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) && (
-            <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-5 space-y-3.5 mt-4">
-              <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-200/60 pb-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                {report.editorSynthesis.title || "에디터 종합 판단 (Editor Synthesis)"}
-              </h3>
-              {report.editorSynthesis.summary && (
-                <p className="text-sm text-slate-800 leading-relaxed font-medium">
-                  {report.editorSynthesis.summary}
-                </p>
-              )}
-              {report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
-                    🔍 주요 비교 및 대조 포인트
-                  </span>
-                  <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm text-slate-700">
-                    {report.editorSynthesis.comparisons.map((cmp, idx) => (
-                      <li key={idx} className="leading-relaxed">{cmp}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {report.editorSynthesis.portfolioImplication && (
-                <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100/80 text-xs md:text-sm text-indigo-950 shadow-2xs">
-                  <span className="font-bold text-indigo-800 block mb-1 flex items-center gap-1">
-                    💼 포트폴리오 대응 및 함의
-                  </span>
-                  <span className="leading-relaxed">{report.editorSynthesis.portfolioImplication}</span>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Disclaimer */}
           <div className="pt-4 border-t border-gray-200 text-center" id="investment-disclaimer">

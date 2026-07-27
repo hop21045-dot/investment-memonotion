@@ -2105,29 +2105,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                     />
                   </div>
 
-                  {/* Quote inside Section */}
-                  <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200/60 space-y-2.5">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                      인용구 (Quote - 선택 사항)
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        value={sec.quote?.text || ""}
-                        onChange={(e) => updateSectionQuote(secIdx, "text", e.target.value)}
-                        placeholder="인용구 내용"
-                        className="col-span-2 text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                      <input
-                        type="text"
-                        value={sec.quote?.author || ""}
-                        onChange={(e) => updateSectionQuote(secIdx, "author", e.target.value)}
-                        placeholder="발언자 이름"
-                        className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
-                  </div>
-
                   {/* Custom Table inside Section */}
                   <div className="border border-gray-200/60 p-4 rounded-lg space-y-3 bg-gray-50/20">
                     <div className="flex items-center justify-between">
@@ -2215,14 +2192,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">
               투자 관점 (Investment View)
             </label>
-            <button
-              type="button"
-              onClick={addMentionedAsset}
-              className="flex items-center gap-1 bg-white hover:bg-gray-50 text-black text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>종목/섹터 추가</span>
-            </button>
           </div>
 
           {/* Investment Thesis Input */}
@@ -2278,54 +2247,43 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               />
             </div>
           </div>
+        </div>
 
-          {/* Mentioned Assets */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider block">
-              🔎 언급 종목 및 관계
-            </span>
-            {mentionedAssets.map((asset, aIdx) => (
-              <div key={aIdx} className="grid grid-cols-4 gap-2 bg-gray-50/50 p-3 rounded-lg border border-gray-200/60 items-center">
-                <input
-                  type="text"
-                  value={asset.asset}
-                  onChange={(e) => {
-                    const updated = [...mentionedAssets];
-                    updated[aIdx].asset = e.target.value;
-                    setMentionedAssets(updated);
-                  }}
-                  placeholder="종목명 (예: 삼성전자)"
-                  className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                />
-                <input
-                  type="text"
-                  value={asset.relation}
-                  onChange={(e) => {
-                    const updated = [...mentionedAssets];
-                    updated[aIdx].relation = e.target.value;
-                    setMentionedAssets(updated);
-                  }}
-                  placeholder="관계 (예: 수혜, 조정)"
-                  className="text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                />
-                <input
-                  type="text"
-                  value={asset.context}
-                  onChange={(e) => {
-                    const updated = [...mentionedAssets];
-                    updated[aIdx].context = e.target.value;
-                    setMentionedAssets(updated);
-                  }}
-                  placeholder="상세 설명 (맥락)"
-                  className="col-span-2 text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                />
-              </div>
-            ))}
+        {/* 맨 마지막: 1. 한 줄 결론 -> 2. 투자 검증 체크리스트 -> 3. 에디터 종합 판단 */}
+        <div className="space-y-5 pt-6 border-t border-gray-200" id="form-final-conclusions">
+          {/* 1. 한 줄 결론 */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
+              💬 한 줄 결론 (One-Line Conclusion)
+            </label>
+            <input
+              type="text"
+              value={oneLineConclusion}
+              onChange={(e) => setOneLineConclusion(e.target.value)}
+              placeholder="예: 2Q26 반도체 레거시 감산 종료 후 모멘텀 본격화 전망"
+              className="w-full text-xs p-3 border border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-bold bg-amber-50/20"
+            />
           </div>
 
-          {/* Editor Synthesis Box */}
-          <div className="p-4 bg-indigo-50/30 border border-indigo-200/60 rounded-xl space-y-3 mt-4">
-            <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider block">✍️ 에디터 종합 판단 (Editor Synthesis)</label>
+          {/* 2. 투자 검증 체크리스트 */}
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+              ☑️ 투자 검증 체크리스트 (Checklist - 줄바꿈 구분)
+            </label>
+            <textarea
+              value={checklist.join("\n")}
+              onChange={(e) => setChecklist(e.target.value.split("\n"))}
+              placeholder="줄바꿈으로 검증이 필요한 항목들을 입력해 주세요."
+              rows={3}
+              className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-slate-500"
+            />
+          </div>
+
+          {/* 3. 에디터 종합 판단 */}
+          <div className="p-4 bg-indigo-50/30 border border-indigo-200/60 rounded-xl space-y-3">
+            <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider block">
+              ✍️ 에디터 종합 판단 (Editor Synthesis)
+            </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-indigo-700">소제목 / 헤드라인</label>
