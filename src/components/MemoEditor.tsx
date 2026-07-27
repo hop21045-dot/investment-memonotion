@@ -2203,38 +2203,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                       <p className="text-[10px] text-gray-450 italic">비교 표가 구성되지 않았습니다.</p>
                     )}
                   </div>
-
-                  {/* Callout Box */}
-                  <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200/60 space-y-2">
-                    <div className="text-[10px] font-bold text-gray-450 uppercase tracking-wider flex items-center justify-between">
-                      <span>핵심 박스 (Callout - 선택 사항)</span>
-                      <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 text-[10px]">
-                        {(['positive', 'negative', 'check point'] as const).map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => updateSectionCallout(secIdx, "type", type)}
-                            className={`px-2 py-0.5 rounded capitalize font-bold ${
-                              (sec.callout?.type === type || 
-                               (type === 'check point' && sec.callout?.type === 'warning') ||
-                               (type === 'negative' && sec.callout?.type === 'risk'))
-                                ? "bg-black text-white"
-                                : "text-gray-500 hover:text-black"
-                            }`}
-                          >
-                            {type}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={sec.callout?.text || ""}
-                      onChange={(e) => updateSectionCallout(secIdx, "text", e.target.value)}
-                      placeholder="강조 문구 입력"
-                      className="w-full text-xs p-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-                    />
-                  </div>
                 </div>
               </div>
             ))}

@@ -835,17 +835,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       md += `* **출처:** [링크](${report.sourceUrl})\n`;
     }
 
-    if (report.oneLineConclusion) {
-      md += `\n> 💬 **한 줄 결론:** ${report.oneLineConclusion}\n`;
-    }
-
     md += `\n## 요약 (Summary)\n${report.summary}\n\n`;
-
-    if (report.checklist && report.checklist.length > 0) {
-      md += `## ☑️ 투자 검증 체크리스트\n`;
-      report.checklist.forEach(item => md += `- [x] ${item}\n`);
-      md += `\n`;
-    }
 
     md += `## 핵심 정리\n\n`;
     report.keyPoints.forEach((p) => (md += `- ${p}\n`));
@@ -1527,19 +1517,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
           </div>
         </div>
 
-        {/* 한 줄 결론 (One-Line Conclusion) */}
-        {report.oneLineConclusion && (
-          <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-l-4 border-amber-500 p-4.5 rounded-r-xl shadow-2xs">
-            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              💬 한 줄 결론 (Bottom Line)
-            </span>
-            <p className="text-sm md:text-base font-bold text-slate-900 leading-relaxed">
-              {report.oneLineConclusion}
-            </p>
-          </div>
-        )}
-
         {/* 요약 (Summary Box) */}
         <div className="bg-gray-50/50 border border-gray-200 rounded-xl p-6 relative animate-fade-in" id="box-summary">
           <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
@@ -1550,24 +1527,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
             <ReactMarkdown>{report.summary}</ReactMarkdown>
           </div>
         </div>
-
-        {/* 투자 검증 체크리스트 (Checklist) */}
-        {report.checklist && report.checklist.length > 0 && (
-          <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 space-y-3">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
-              <Check className="w-4 h-4 text-emerald-600" />
-              투자 검증 체크리스트 (Checklist)
-            </h3>
-            <div className="space-y-2">
-              {report.checklist.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 text-xs md:text-sm text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
-                  <span className="text-emerald-600 font-bold mt-0.5">☑️</span>
-                  <span className="leading-relaxed font-medium">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 핵심 정리 (Key Takeaways) */}
         <div className="space-y-3.5" id="box-keypoints">
