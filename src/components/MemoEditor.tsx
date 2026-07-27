@@ -857,12 +857,20 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         }
         
         let caveatsList: string[] = [];
-        if (iv.caveats && Array.isArray(iv.caveats)) {
+        if (iv.caveats && Array.isArray(iv.caveats) && iv.caveats.length > 0) {
           caveatsList = iv.caveats.map((c: any) => String(c));
-        } else if (iv.riskFactors && Array.isArray(iv.riskFactors)) {
+        } else if (iv.riskFactors && Array.isArray(iv.riskFactors) && iv.riskFactors.length > 0) {
           caveatsList = iv.riskFactors.map((r: any) => String(r));
+        } else if (iv.risks && Array.isArray(iv.risks) && iv.risks.length > 0) {
+          caveatsList = iv.risks.map((r: any) => String(r));
         }
         setCaveats(caveatsList);
+
+        if (iv.risks && Array.isArray(iv.risks) && iv.risks.length > 0) {
+          setRisks(iv.risks.map((r: any) => String(r)));
+        } else if (caveatsList.length > 0) {
+          setRisks(caveatsList);
+        }
 
         setNeutralEvaluation(iv.neutralEvaluation || "");
       }
@@ -1064,12 +1072,20 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         }
         
         let caveatsList: string[] = [];
-        if (iv.caveats && Array.isArray(iv.caveats)) {
+        if (iv.caveats && Array.isArray(iv.caveats) && iv.caveats.length > 0) {
           caveatsList = iv.caveats.map((c: any) => String(c));
-        } else if (iv.riskFactors && Array.isArray(iv.riskFactors)) {
+        } else if (iv.riskFactors && Array.isArray(iv.riskFactors) && iv.riskFactors.length > 0) {
           caveatsList = iv.riskFactors.map((r: any) => String(r));
+        } else if (iv.risks && Array.isArray(iv.risks) && iv.risks.length > 0) {
+          caveatsList = iv.risks.map((r: any) => String(r));
         }
         setCaveats(caveatsList);
+
+        if (iv.risks && Array.isArray(iv.risks) && iv.risks.length > 0) {
+          setRisks(iv.risks.map((r: any) => String(r)));
+        } else if (caveatsList.length > 0) {
+          setRisks(caveatsList);
+        }
 
         setNeutralEvaluation(iv.neutralEvaluation || "");
       }

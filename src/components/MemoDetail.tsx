@@ -928,6 +928,29 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     });
 
     md += `## 📊 투자 관점 (Investment View)\n\n`;
+
+    if (report.investmentView.thesis) {
+      md += `### 💡 핵심 투자 가설 (Thesis)\n${report.investmentView.thesis}\n\n`;
+    }
+
+    if (report.investmentView.implications && report.investmentView.implications.length > 0) {
+      md += `### 📈 실적 및 모멘텀 시사점\n`;
+      report.investmentView.implications.forEach((imp) => (md += `- ${imp}\n`));
+      md += `\n`;
+    }
+
+    if (report.investmentView.risks && report.investmentView.risks.length > 0) {
+      md += `### ⚠️ 핵심 리스크 요인\n`;
+      report.investmentView.risks.forEach((r) => (md += `- ${r}\n`));
+      md += `\n`;
+    }
+
+    if (report.investmentView.keyTrackingVariables && report.investmentView.keyTrackingVariables.length > 0) {
+      md += `### 🎯 주요 추적 변수\n`;
+      report.investmentView.keyTrackingVariables.forEach((v) => (md += `- ${v}\n`));
+      md += `\n`;
+    }
+
     md += `### 🔍 언급 종목 및 섹터\n`;
     if (report.investmentView.mentionedAssets && report.investmentView.mentionedAssets.length > 0) {
       md += `| 종목·섹터 | 관계 | 맥락 |\n`;
@@ -1623,7 +1646,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                   )}
                 </div>
                 <div className="markdown-body prose max-w-none text-sm text-slate-750 leading-relaxed text-justify space-y-4">
-                  {(sec.summary || (sec.details && sec.details.length > 0) || (sec.bullArguments && sec.bullArguments.length > 0) || (sec.keyVariables && sec.keyVariables.length > 0) || (sec.riskFactors && sec.riskFactors.length > 0)) ? (
+                  {(sec.summary || (sec.details && sec.details.length > 0)) ? (
                     <div className="space-y-4">
                       {sec.summary && (
                         <p className="text-sm font-semibold text-gray-900 leading-relaxed">{sec.summary}</p>
@@ -1636,48 +1659,9 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                           ))}
                         </ul>
                       )}
-
-                      {sec.bullArguments && sec.bullArguments.length > 0 && (
-                        <div className="bg-emerald-50/40 border-l-4 border-emerald-500 pl-4 py-2.5 my-3 rounded-r-lg">
-                          <span className="font-bold text-emerald-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
-                            ✅ 강세 논거
-                          </span>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {sec.bullArguments.map((b, bIdx) => (
-                              <li key={bIdx} className="text-emerald-950 text-sm leading-relaxed">{b}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {sec.keyVariables && sec.keyVariables.length > 0 && (
-                        <div className="bg-amber-50/40 border-l-4 border-amber-500 pl-4 py-2.5 my-3 rounded-r-lg">
-                          <span className="font-bold text-amber-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
-                            ⚠️ 핵심 변수
-                          </span>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {sec.keyVariables.map((v, vIdx) => (
-                              <li key={vIdx} className="text-amber-950 text-sm leading-relaxed">{v}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {sec.riskFactors && sec.riskFactors.length > 0 && (
-                        <div className="bg-rose-50/40 border-l-4 border-rose-500 pl-4 py-2.5 my-3 rounded-r-lg">
-                          <span className="font-bold text-rose-800 flex items-center gap-1.5 text-xs mb-1.5 uppercase tracking-wider">
-                            ❌ 리스크
-                          </span>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {sec.riskFactors.map((r, rIdx) => (
-                              <li key={rIdx} className="text-rose-950 text-sm leading-relaxed">{r}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   ) : (
-                    <ReactMarkdown>{sec.content}</ReactMarkdown>
+                    <ReactMarkdown>{sec.content || ""}</ReactMarkdown>
                   )}
                 </div>
 
@@ -1724,38 +1708,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                   </div>
                 )}
 
-                {/* Optional Callout Box */}
-                {sec.callout && sec.callout.text && (
-                  <div
-                    className={`flex gap-2.5 p-4 rounded-lg border leading-relaxed text-xs md:text-sm my-3 ${
-                      sec.callout.type === "positive"
-                        ? "bg-emerald-50/50 border-emerald-200/40 text-emerald-900"
-                        : (sec.callout.type === "negative" || sec.callout.type === "risk")
-                        ? "bg-rose-50/50 border-rose-200/40 text-rose-900"
-                        : "bg-amber-50/50 border-amber-200/40 text-amber-900"
-                    }`}
-                  >
-                    <div className="flex-shrink-0 mt-0.5">
-                      {sec.callout.type === "positive" ? (
-                        <Check className="w-4 h-4 text-emerald-600" />
-                      ) : (sec.callout.type === "negative" || sec.callout.type === "risk") ? (
-                        <ShieldAlert className="w-4 h-4 text-rose-600" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      )}
-                    </div>
-                    <div>
-                      <strong className="font-semibold block mb-0.5">
-                        {sec.callout.type === "positive"
-                          ? "강세 요소 (Positive)"
-                          : (sec.callout.type === "negative" || sec.callout.type === "risk")
-                          ? "리스크 요인 (Negative)"
-                          : "체크 포인트 (Check Point)"}
-                      </strong>
-                      <span className="text-slate-600">{sec.callout.text}</span>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -1893,7 +1845,10 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                 🔴 주의 및 반론 (Bear Risks)
               </h4>
               <ul className="space-y-1.5 text-xs md:text-sm text-gray-800">
-                {report.investmentView.caveats.map((arg, idx) => (
+                {(report.investmentView.caveats && report.investmentView.caveats.length > 0
+                  ? report.investmentView.caveats
+                  : report.investmentView.risks || []
+                ).map((arg, idx) => (
                   <li key={idx} className="flex gap-2 items-start leading-relaxed font-medium">
                     <span className="text-rose-500 font-bold mt-0.5">-</span>
                     <span>{arg}</span>
