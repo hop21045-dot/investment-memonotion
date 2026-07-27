@@ -591,11 +591,13 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       const inv = report.investmentView || {};
       setThesis(inv.thesis || "");
       setImplications(inv.implications ? [...inv.implications] : []);
-      setRisks(inv.risks ? [...inv.risks] : []);
+      const rList = inv.risks ? [...inv.risks] : [];
+      const cList = inv.caveats ? [...inv.caveats] : [];
+      setRisks(rList.length > 0 ? rList : cList);
+      setCaveats(cList.length > 0 ? cList : rList);
       setKeyTrackingVariables(inv.keyTrackingVariables ? [...inv.keyTrackingVariables] : []);
       setMentionedAssets(inv.mentionedAssets ? JSON.parse(JSON.stringify(inv.mentionedAssets)) : []);
       setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
-      setCaveats(inv.caveats ? [...inv.caveats] : []);
       setNeutralEvaluation(inv.neutralEvaluation || "");
 
       if (report.rating) {
@@ -2045,53 +2047,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
           />
         </div>
 
-        {/* Editor Synthesis Box */}
-        <div className="p-4 bg-indigo-50/30 border border-indigo-200/60 rounded-xl space-y-3">
-          <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider block">✍️ 에디터 종합 판단 (Editor Synthesis)</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-indigo-700">소제목 / 헤드라인</label>
-              <input
-                type="text"
-                value={editorSynthesis.title}
-                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, title: e.target.value })}
-                placeholder="예: 투자 아이디어 종합 판단"
-                className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-indigo-700">포트폴리오 대응 및 함의</label>
-              <input
-                type="text"
-                value={editorSynthesis.portfolioImplication}
-                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, portfolioImplication: e.target.value })}
-                placeholder="예: 비중 확대 보류, 3분기실적 확인 후 대응 권장"
-                className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-indigo-700">종합 요약 및 에디터 총평</label>
-            <textarea
-              value={editorSynthesis.summary}
-              onChange={(e) => setEditorSynthesis({ ...editorSynthesis, summary: e.target.value })}
-              placeholder="원문 핵심 내용과 내 투자관점 간 차이, 핵심 시사점을 자유롭게 기록하세요."
-              rows={3}
-              className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-indigo-700">주요 비교 및 대조 포인트 (줄바꿈 구분)</label>
-            <textarea
-              value={(editorSynthesis.comparisons || []).join("\n")}
-              onChange={(e) => setEditorSynthesis({ ...editorSynthesis, comparisons: e.target.value.split("\n") })}
-              placeholder="줄바꿈으로 기사/리포트 간 비교 포인트를 추가하세요."
-              rows={2}
-              className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-        </div>
-
         {/* Investment Checklist */}
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
           <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">☑️ 투자 검증 체크리스트 (Checklist - 줄바꿈 구분)</label>
@@ -2466,6 +2421,53 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               rows={3}
               className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
             />
+          </div>
+
+          {/* Editor Synthesis Box */}
+          <div className="p-4 bg-indigo-50/30 border border-indigo-200/60 rounded-xl space-y-3 mt-4">
+            <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider block">✍️ 에디터 종합 판단 (Editor Synthesis)</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-indigo-700">소제목 / 헤드라인</label>
+                <input
+                  type="text"
+                  value={editorSynthesis.title}
+                  onChange={(e) => setEditorSynthesis({ ...editorSynthesis, title: e.target.value })}
+                  placeholder="예: 투자 아이디어 종합 판단"
+                  className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-indigo-700">포트폴리오 대응 및 함의</label>
+                <input
+                  type="text"
+                  value={editorSynthesis.portfolioImplication}
+                  onChange={(e) => setEditorSynthesis({ ...editorSynthesis, portfolioImplication: e.target.value })}
+                  placeholder="예: 비중 확대 보류, 3분기실적 확인 후 대응 권장"
+                  className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-indigo-700">종합 요약 및 에디터 총평</label>
+              <textarea
+                value={editorSynthesis.summary}
+                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, summary: e.target.value })}
+                placeholder="원문 핵심 내용과 내 투자관점 간 차이, 핵심 시사점을 자유롭게 기록하세요."
+                rows={3}
+                className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-indigo-700">주요 비교 및 대조 포인트 (줄바꿈 구분)</label>
+              <textarea
+                value={(editorSynthesis.comparisons || []).join("\n")}
+                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, comparisons: e.target.value.split("\n") })}
+                placeholder="줄바꿈으로 기사/리포트 간 비교 포인트를 추가하세요."
+                rows={2}
+                className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
           </div>
         </div>
 

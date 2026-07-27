@@ -841,20 +841,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
 
     md += `\n## 요약 (Summary)\n${report.summary}\n\n`;
 
-    if (report.editorSynthesis) {
-      md += `## ✍️ 에디터 종합 판단\n`;
-      if (report.editorSynthesis.title) md += `### ${report.editorSynthesis.title}\n`;
-      if (report.editorSynthesis.summary) md += `${report.editorSynthesis.summary}\n\n`;
-      if (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) {
-        md += `**주요 비교 및 대조 포인트:**\n`;
-        report.editorSynthesis.comparisons.forEach(cmp => md += `- ${cmp}\n`);
-        md += `\n`;
-      }
-      if (report.editorSynthesis.portfolioImplication) {
-        md += `**포트폴리오 대응:** ${report.editorSynthesis.portfolioImplication}\n\n`;
-      }
-    }
-
     if (report.checklist && report.checklist.length > 0) {
       md += `## ☑️ 투자 검증 체크리스트\n`;
       report.checklist.forEach(item => md += `- [x] ${item}\n`);
@@ -972,6 +958,21 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     md += `\n`;
 
     md += `### ⚖️ 중립적 종합 평가\n${report.investmentView.neutralEvaluation}\n\n`;
+
+    if (report.editorSynthesis) {
+      md += `## ✍️ 에디터 종합 판단\n`;
+      if (report.editorSynthesis.title) md += `### ${report.editorSynthesis.title}\n`;
+      if (report.editorSynthesis.summary) md += `${report.editorSynthesis.summary}\n\n`;
+      if (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) {
+        md += `**주요 비교 및 대조 포인트:**\n`;
+        report.editorSynthesis.comparisons.forEach(cmp => md += `- ${cmp}\n`);
+        md += `\n`;
+      }
+      if (report.editorSynthesis.portfolioImplication) {
+        md += `**포트폴리오 대응:** ${report.editorSynthesis.portfolioImplication}\n\n`;
+      }
+    }
+
     md += `*※ 본 내용은 정보 제공 목적이며 투자 권유가 아닙니다.*\n`;
 
     navigator.clipboard.writeText(md).then(() => {
@@ -1550,41 +1551,6 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
           </div>
         </div>
 
-        {/* 에디터 종합 판단 (Editor Synthesis) */}
-        {report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) && (
-          <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-5 space-y-3.5">
-            <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-200/60 pb-2">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
-              {report.editorSynthesis.title || "에디터 종합 판단 (Editor Synthesis)"}
-            </h3>
-            {report.editorSynthesis.summary && (
-              <p className="text-sm text-slate-800 leading-relaxed font-medium">
-                {report.editorSynthesis.summary}
-              </p>
-            )}
-            {report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
-                  🔍 주요 비교 및 대조 포인트
-                </span>
-                <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm text-slate-700">
-                  {report.editorSynthesis.comparisons.map((cmp, idx) => (
-                    <li key={idx} className="leading-relaxed">{cmp}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {report.editorSynthesis.portfolioImplication && (
-              <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100/80 text-xs md:text-sm text-indigo-950 shadow-2xs">
-                <span className="font-bold text-indigo-800 block mb-1 flex items-center gap-1">
-                  💼 포트폴리오 대응 및 함의
-                </span>
-                <span className="leading-relaxed">{report.editorSynthesis.portfolioImplication}</span>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* 투자 검증 체크리스트 (Checklist) */}
         {report.checklist && report.checklist.length > 0 && (
           <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 space-y-3">
@@ -1867,6 +1833,41 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
               <ReactMarkdown>{report.investmentView.neutralEvaluation}</ReactMarkdown>
             </div>
           </div>
+
+          {/* 에디터 종합 판단 (Editor Synthesis) */}
+          {report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) && (
+            <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-5 space-y-3.5 mt-4">
+              <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-200/60 pb-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                {report.editorSynthesis.title || "에디터 종합 판단 (Editor Synthesis)"}
+              </h3>
+              {report.editorSynthesis.summary && (
+                <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                  {report.editorSynthesis.summary}
+                </p>
+              )}
+              {report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
+                    🔍 주요 비교 및 대조 포인트
+                  </span>
+                  <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm text-slate-700">
+                    {report.editorSynthesis.comparisons.map((cmp, idx) => (
+                      <li key={idx} className="leading-relaxed">{cmp}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {report.editorSynthesis.portfolioImplication && (
+                <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100/80 text-xs md:text-sm text-indigo-950 shadow-2xs">
+                  <span className="font-bold text-indigo-800 block mb-1 flex items-center gap-1">
+                    💼 포트폴리오 대응 및 함의
+                  </span>
+                  <span className="leading-relaxed">{report.editorSynthesis.portfolioImplication}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Disclaimer */}
           <div className="pt-4 border-t border-gray-200 text-center" id="investment-disclaimer">
