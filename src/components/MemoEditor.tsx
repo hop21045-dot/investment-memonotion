@@ -2035,29 +2035,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             ))}
           </div>
         </div>
-        {/* One line conclusion */}
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-gray-500">💬 한 줄 결론 (One-Line Conclusion)</label>
-          <input
-            type="text"
-            value={oneLineConclusion}
-            onChange={(e) => setOneLineConclusion(e.target.value)}
-            placeholder="예: 2Q26 반도체 레거시 감산 종료 후 모멘텀 본격화 전망"
-            className="w-full text-sm p-2.5 border border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-bold bg-amber-50/20"
-          />
-        </div>
-
-        {/* Investment Checklist */}
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">☑️ 투자 검증 체크리스트 (Checklist - 줄바꿈 구분)</label>
-          <textarea
-            value={checklist.join("\n")}
-            onChange={(e) => setChecklist(e.target.value.split("\n"))}
-            placeholder="줄바꿈으로 검증이 필요한 항목들을 입력해 주세요."
-            rows={3}
-            className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-slate-500"
-          />
-        </div>
 
         <div className="space-y-5" id="form-sections">
           <div className="flex items-center justify-between border-b border-gray-200 pb-2">
@@ -2376,51 +2353,6 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 />
               </div>
             ))}
-          </div>
-
-          {/* Bull arguments vs Caveats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Bull args */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-                🟢 강세 논거 (Bull Arguments)
-              </span>
-              <textarea
-                value={bullArguments.join("\n")}
-                onChange={(e) => setBullArguments(e.target.value.split("\n"))}
-                placeholder="줄바꿈으로 여러 개의 강세 논거를 분리해 주세요."
-                rows={4}
-                className="w-full text-xs p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-              />
-            </div>
-
-            {/* Caveats */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
-                🔴 주의 및 반론 (Bear Risks)
-              </span>
-              <textarea
-                value={caveats.join("\n")}
-                onChange={(e) => setCaveats(e.target.value.split("\n"))}
-                placeholder="줄바꿈으로 여러 개의 반론/리스크를 분리해 주세요."
-                rows={4}
-                className="w-full text-xs p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-              />
-            </div>
-          </div>
-
-          {/* Neutral Evaluation */}
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-              ⚖️ 중립적 종합 평가 (Neutral Evaluation)
-            </span>
-            <textarea
-              value={neutralEvaluation}
-              onChange={(e) => setNeutralEvaluation(e.target.value)}
-              placeholder="낙관과 비관의 종합 종합 평가를 입력해 주세요."
-              rows={3}
-              className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-            />
           </div>
 
           {/* Editor Synthesis Box */}
