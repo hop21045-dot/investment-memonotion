@@ -62,56 +62,58 @@ ${text}
 
 Provide your response in JSON format matching this schema:
 {
-  "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji, followed by the source in parentheses '(☆: 출처명)' where '☆' is the name of the source, such as the brokerage company name, YouTube channel name/video title, news outlet, etc. (e.g., '🎥 [테크] TV 디스플레이 시장 전망 및 기술 트렌드 (☆: 삼프로TV)' or '📢 [반도체] Rubin Ultra HBM4E 스펙 변화 가능성 (☆: 신한투자증권)')",
-  "date": "The date of the report or current date if not found (YYYY-MM-DD format)",
-  "category": "One of 'youtube', 'telegram', or 'report'",
+  "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji, followed by '(☆: 출처명)' where '☆' is the name of the source (e.g. '🎥 [반도체] Citi 글로벌 반도체 전망 (☆: Citi)')",
+  "category": "youtube | telegram | report | webpage",
+  "sectors": ["Sector 1", "Sector 2"],
   "sourceUrl": "The URL of the source if mentioned, or empty string",
+  "date": "YYYY-MM-DD format",
+  "sourceName": "The name of the source/brokerage/channel (e.g., 'Citi', '신한투자증권')",
   "summary": "An elegant 2-3 sentence overview summarizing the core event or findings",
   "keyPoints": [
     "Key Takeaway 1",
-    "Key Takeaway 2",
-    "Key Takeaway 3"
+    "Key Takeaway 2"
   ],
-  "importance": 4, // An integer score from 1 to 5 matching the IMPORTANCE RATING criteria above
-  "verified": "X", // Verification status. MUST be default "X" (needs verification / not yet verified).
-  "status": "요약완료", // Progress status. MUST be default "요약완료"
-  "action": "", // Core next action. Default to empty string "" (blank / no immediate action). Or you can select one of: "1차 요약 필요" | "원문 정독" | "원문 검증 필요" | "ChatGPT 검증 대기" | "Wiki 반영 후보" | "Wiki 반영 필요" | "트래커 업데이트 필요" | "보류" | "폐기" | ""
+  "oneLineConclusion": "A high-impact 1-sentence bottom-line investment thesis",
+  "checklist": [
+    "Checklist item / verification condition 1",
+    "Checklist item / verification condition 2"
+  ],
+  "editorSynthesis": {
+    "title": "종합 판단 / 에디터 총평 제목",
+    "summary": "에디터 종합 요약 문단",
+    "comparisons": ["비교/대조포인트 1", "비교/대조포인트 2"],
+    "portfolioImplication": "포트폴리오 대응 전략 및 함의"
+  },
   "sections": [
     {
-      "title": "01 | [Thematic Topic] Section title",
+      "title": "01 | [주제] 섹터 분석 대제목",
       "summary": "Core summary of this section in 2-3 sentences",
       "details": [
         "Detail point 1",
         "Detail point 2"
       ],
-      "bullArguments": [
-        "Bull argument or positive factors for this section 1",
-        "Bull argument or positive factors for this section 2"
-      ],
-      "riskFactors": [
-        "Risk factors or warning indicators for this section 1"
-      ],
-      "keyVariables": [
-        "Key monitoring tracking variables or milestones for this section 1"
-      ],
-      "quote": {
-        "text": "An impactful direct or summarized quote from the speaker/author, if any",
-        "author": "The name of the speaker or author of the quote"
-      },
       "table": {
-        "headers": ["Header 1", "Header 2", "Header 3"],
+        "headers": ["Header 1", "Header 2"],
         "rows": [
-          ["Row 1 Col 1", "Row 1 Col 2", "Row 1 Col 3"],
-          ["Row 2 Col 1", "Row 2 Col 2", "Row 2 Col 3"]
+          ["Row 1 Col 1", "Row 1 Col 2"]
         ]
       },
-      "callout": {
-        "type": "positive | negative | check point",
-        "text": "Actionable, highlighting sentence (without including the emoji since the UI will render it based on the type)"
-      }
+      "source": "출처/페이지"
     }
   ],
   "investmentView": {
+    "thesis": "핵심 투자 가설 및 주 논지",
+    "implications": [
+      "실적/수급/상승요인 함의 1",
+      "실적/수급/상승요인 함의 2"
+    ],
+    "risks": [
+      "핵심 리스크 요인 1",
+      "핵심 리스크 요인 2"
+    ],
+    "keyTrackingVariables": [
+      "앞으로 추적해야 할 주요 지표/이벤트 1"
+    ],
     "mentionedAssets": [
       {
         "asset": "Company or asset name (e.g., 삼성전자 (005930))",
@@ -120,18 +122,26 @@ Provide your response in JSON format matching this schema:
       }
     ],
     "bullArguments": [
-      "Bullish catalyst or long-term growth factor 1",
-      "Bullish catalyst or long-term growth factor 2"
+      "Bullish catalyst 1"
     ],
     "caveats": [
-      "Bearish risk or critical warning 1",
-      "Bearish risk or critical warning 2"
+      "Bearish risk 1"
     ],
     "neutralEvaluation": "A balanced, neutral macro or industry evaluation summary paragraph"
-  }
+  },
+  "rating": {
+    "importance": 4,
+    "read_priority": 3,
+    "verification_need": 2,
+    "notion_save": "저장",
+    "recommended_action": "요약만 저장",
+    "score_rationale": "평가 이유"
+  },
+  "status": "요약완료",
+  "action": ""
 }
 
-Ensure to generate at least 2 or 3 detailed sections to capture the full breadth of the raw content. For sections, include comparison tables and callout boxes where appropriate to match the rich visual format of professional Notion pages. Particularly, if there are competitor comparison details (such as multiples or financial metrics across companies), you MUST output them in a structured table under the 'table' field of that section.`;
+Ensure to generate detailed sections to capture the full breadth of the raw content. For sections, include comparison tables where appropriate to match the rich visual format of professional Notion pages.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -141,21 +151,47 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
-          required: ["title", "date", "category", "summary", "keyPoints", "importance", "verified", "status", "action", "rating", "sections", "investmentView"],
+          required: ["title", "date", "category", "summary", "keyPoints", "rating", "sections", "investmentView"],
           properties: {
             title: { type: Type.STRING },
             date: { type: Type.STRING },
             category: { type: Type.STRING },
+            sectors: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
             sourceUrl: { type: Type.STRING },
+            sourceUrls: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            sourceName: { type: Type.STRING },
             summary: { type: Type.STRING },
             keyPoints: {
               type: Type.ARRAY,
               items: { type: Type.STRING }
             },
+            oneLineConclusion: { type: Type.STRING },
+            checklist: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            editorSynthesis: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                summary: { type: Type.STRING },
+                comparisons: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
+                portfolioImplication: { type: Type.STRING }
+              }
+            },
             importance: { type: Type.INTEGER },
-            verified: { type: Type.STRING, enum: ["O", "X"] },
-            status: { type: Type.STRING, enum: ["요약완료", "정독필요", "검증중", "검증완료", "Wiki반영"] },
-            action: { type: Type.STRING, enum: ["1차 요약 필요", "원문 정독", "원문 검증 필요", "ChatGPT 검증 대기", "Wiki 반영 후보", "Wiki 반영 필요", "트래커 업데이트 필요", "보류", "폐기", ""] },
+            verified: { type: Type.STRING },
+            status: { type: Type.STRING },
+            action: { type: Type.STRING },
             rating: {
               type: Type.OBJECT,
               required: ["importance", "read_priority", "verification_need", "notion_save", "recommended_action", "score_rationale"],
@@ -168,7 +204,7 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
                 score_rationale: { type: Type.STRING }
               }
             },
-             sections: {
+            sections: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
@@ -177,6 +213,7 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
                   title: { type: Type.STRING },
                   content: { type: Type.STRING },
                   summary: { type: Type.STRING },
+                  source: { type: Type.STRING },
                   details: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING }
@@ -195,7 +232,6 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
                   },
                   quote: {
                     type: Type.OBJECT,
-                    required: ["text", "author"],
                     properties: {
                       text: { type: Type.STRING },
                       author: { type: Type.STRING }
@@ -203,7 +239,6 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
                   },
                   table: {
                     type: Type.OBJECT,
-                    required: ["headers", "rows"],
                     properties: {
                       headers: {
                         type: Type.ARRAY,
@@ -220,7 +255,6 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
                   },
                   callout: {
                     type: Type.OBJECT,
-                    required: ["type", "text"],
                     properties: {
                       type: { type: Type.STRING },
                       text: { type: Type.STRING }
@@ -231,13 +265,24 @@ Ensure to generate at least 2 or 3 detailed sections to capture the full breadth
             },
             investmentView: {
               type: Type.OBJECT,
-              required: ["mentionedAssets", "bullArguments", "caveats", "neutralEvaluation"],
               properties: {
+                thesis: { type: Type.STRING },
+                implications: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
+                risks: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
+                keyTrackingVariables: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
                 mentionedAssets: {
                   type: Type.ARRAY,
                   items: {
                     type: Type.OBJECT,
-                    required: ["asset", "relation", "context"],
                     properties: {
                       asset: { type: Type.STRING },
                       relation: { type: Type.STRING },

@@ -518,6 +518,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [newSector, setNewSector] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceUrls, setSourceUrls] = useState<string[]>([""]);
+  const [sourceName, setSourceName] = useState("");
   const [summary, setSummary] = useState("");
   const [importance, setImportance] = useState<number>(3); // Default to 3
   const [verified, setVerified] = useState<"O" | "X">("X");
@@ -525,6 +526,19 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [action, setAction] = useState<StructuredReport["action"]>("");
   const [keyPoints, setKeyPoints] = useState<string[]>(["", "", ""]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [oneLineConclusion, setOneLineConclusion] = useState("");
+  const [checklist, setChecklist] = useState<string[]>([]);
+  const [editorSynthesis, setEditorSynthesis] = useState<{
+    title: string;
+    summary: string;
+    comparisons: string[];
+    portfolioImplication: string;
+  }>({
+    title: "",
+    summary: "",
+    comparisons: [],
+    portfolioImplication: ""
+  });
   
   // Multi-dimensional rating fields state
   const [readPriority, setReadPriority] = useState<number>(3);
@@ -535,6 +549,10 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [scoreRationale, setScoreRationale] = useState<string>("");
 
   // Investment view states
+  const [thesis, setThesis] = useState("");
+  const [implications, setImplications] = useState<string[]>([]);
+  const [risks, setRisks] = useState<string[]>([]);
+  const [keyTrackingVariables, setKeyTrackingVariables] = useState<string[]>([]);
   const [mentionedAssets, setMentionedAssets] = useState<MentionedAsset[]>([]);
   const [bullArguments, setBullArguments] = useState<string[]>([]);
   const [caveats, setCaveats] = useState<string[]>([]);
@@ -553,15 +571,28 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       } else {
         setSourceUrls(report.sourceUrl ? [report.sourceUrl] : [""]);
       }
+      setSourceName(report.sourceName || "");
       setSummary(report.summary);
       setImportance(report.importance || 3);
       setVerified(report.verified || "X");
-      setStatus(report.status || "요약완료");
+      setStatus((report.status as any) || "요약완료");
       setAction(report.action !== undefined ? report.action : "");
       setKeyPoints(report.keyPoints.length > 0 ? [...report.keyPoints] : ["", "", ""]);
       setSections(report.sections ? JSON.parse(JSON.stringify(report.sections)) : []);
+      setOneLineConclusion(report.oneLineConclusion || "");
+      setChecklist(report.checklist ? [...report.checklist] : []);
+      setEditorSynthesis(report.editorSynthesis ? JSON.parse(JSON.stringify(report.editorSynthesis)) : {
+        title: "",
+        summary: "",
+        comparisons: [],
+        portfolioImplication: ""
+      });
       
-      const inv = report.investmentView;
+      const inv = report.investmentView || {};
+      setThesis(inv.thesis || "");
+      setImplications(inv.implications ? [...inv.implications] : []);
+      setRisks(inv.risks ? [...inv.risks] : []);
+      setKeyTrackingVariables(inv.keyTrackingVariables ? [...inv.keyTrackingVariables] : []);
       setMentionedAssets(inv.mentionedAssets ? JSON.parse(JSON.stringify(inv.mentionedAssets)) : []);
       setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
       setCaveats(inv.caveats ? [...inv.caveats] : []);
@@ -588,12 +619,25 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setSectors(["AI", "반도체"]);
       setSourceUrl("");
       setSourceUrls([""]);
+      setSourceName("");
       setSummary("");
       setImportance(3);
       setVerified("X");
       setStatus("요약완료");
       setAction("");
       setKeyPoints(["", "", ""]);
+      setOneLineConclusion("");
+      setChecklist([]);
+      setEditorSynthesis({
+        title: "",
+        summary: "",
+        comparisons: [],
+        portfolioImplication: ""
+      });
+      setThesis("");
+      setImplications([]);
+      setRisks([]);
+      setKeyTrackingVariables([]);
       setSections([
         {
           id: "sec-init-1",
@@ -780,8 +824,27 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setSections(parsedSections);
       }
       
+      if (data.sourceName) setSourceName(data.sourceName);
+      if (data.oneLineConclusion) setOneLineConclusion(data.oneLineConclusion);
+      if (data.checklist && Array.isArray(data.checklist)) {
+        setChecklist(data.checklist.map((c: any) => String(c)));
+      }
+      if (data.editorSynthesis) {
+        setEditorSynthesis({
+          title: data.editorSynthesis.title || "",
+          summary: data.editorSynthesis.summary || "",
+          comparisons: Array.isArray(data.editorSynthesis.comparisons) ? data.editorSynthesis.comparisons.map((c: any) => String(c)) : [],
+          portfolioImplication: data.editorSynthesis.portfolioImplication || ""
+        });
+      }
+
       if (data.investmentView) {
         const iv = data.investmentView;
+        if (iv.thesis) setThesis(iv.thesis);
+        if (iv.implications && Array.isArray(iv.implications)) setImplications(iv.implications.map((i: any) => String(i)));
+        if (iv.risks && Array.isArray(iv.risks)) setRisks(iv.risks.map((r: any) => String(r)));
+        if (iv.keyTrackingVariables && Array.isArray(iv.keyTrackingVariables)) setKeyTrackingVariables(iv.keyTrackingVariables.map((v: any) => String(v)));
+
         if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
           setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
             asset: asset.asset || asset.name || "",
@@ -801,14 +864,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         }
         setCaveats(caveatsList);
 
-        let evaluationText = iv.neutralEvaluation || "";
-        if (data.oneLineConclusion) {
-          evaluationText += `\n\n📌 한줄 결론:\n${data.oneLineConclusion}`;
-        }
-        if (data.checklist && Array.isArray(data.checklist) && data.checklist.length > 0) {
-          evaluationText += `\n\n✅ 체크리스트:\n${data.checklist.map((item: any) => `- ${item}`).join("\n")}`;
-        }
-        setNeutralEvaluation(evaluationText);
+        setNeutralEvaluation(iv.neutralEvaluation || "");
       }
 
       triggerToast("🎉 AI가 원문을 분석하여 노션 스타일 폼을 자동으로 완성했습니다! 아래 입력된 내용을 확인해 보세요.", "success");
@@ -974,9 +1030,28 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setSections(parsedSections);
       }
       
+      if (data.sourceName) setSourceName(data.sourceName);
+      if (data.oneLineConclusion) setOneLineConclusion(data.oneLineConclusion);
+      if (data.checklist && Array.isArray(data.checklist)) {
+        setChecklist(data.checklist.map((c: any) => String(c)));
+      }
+      if (data.editorSynthesis) {
+        setEditorSynthesis({
+          title: data.editorSynthesis.title || "",
+          summary: data.editorSynthesis.summary || "",
+          comparisons: Array.isArray(data.editorSynthesis.comparisons) ? data.editorSynthesis.comparisons.map((c: any) => String(c)) : [],
+          portfolioImplication: data.editorSynthesis.portfolioImplication || ""
+        });
+      }
+
       // 5. Fill in investment views
       if (data.investmentView) {
         const iv = data.investmentView;
+        if (iv.thesis) setThesis(iv.thesis);
+        if (iv.implications && Array.isArray(iv.implications)) setImplications(iv.implications.map((i: any) => String(i)));
+        if (iv.risks && Array.isArray(iv.risks)) setRisks(iv.risks.map((r: any) => String(r)));
+        if (iv.keyTrackingVariables && Array.isArray(iv.keyTrackingVariables)) setKeyTrackingVariables(iv.keyTrackingVariables.map((v: any) => String(v)));
+
         if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
           setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
             asset: asset.asset || asset.name || "",
@@ -996,14 +1071,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         }
         setCaveats(caveatsList);
 
-        let evaluationText = iv.neutralEvaluation || "";
-        if (data.oneLineConclusion) {
-          evaluationText += `\n\n📌 한줄 결론:\n${data.oneLineConclusion}`;
-        }
-        if (data.checklist && Array.isArray(data.checklist) && data.checklist.length > 0) {
-          evaluationText += `\n\n✅ 체크리스트:\n${data.checklist.map((item: any) => `- ${item}`).join("\n")}`;
-        }
-        setNeutralEvaluation(evaluationText);
+        setNeutralEvaluation(iv.neutralEvaluation || "");
       }
 
       triggerToast("🎉 AI 분석 JSON 데이터가 성공적으로 폼에 자동 입력되었습니다! 아래 폼 필드들을 검토해 보시고 저장해 주세요.", "success");
@@ -1028,8 +1096,17 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       category,
       sourceUrl: nonEvUrls[0] || "",
       sourceUrls: nonEvUrls,
+      sourceName: sourceName.trim() || undefined,
       summary,
       importance,
+      oneLineConclusion: oneLineConclusion.trim() || undefined,
+      checklist: checklist.filter(c => c.trim() !== ""),
+      editorSynthesis: (editorSynthesis.title || editorSynthesis.summary || editorSynthesis.portfolioImplication || (editorSynthesis.comparisons && editorSynthesis.comparisons.length > 0)) ? {
+        title: editorSynthesis.title,
+        summary: editorSynthesis.summary,
+        comparisons: editorSynthesis.comparisons.filter(c => c.trim() !== ""),
+        portfolioImplication: editorSynthesis.portfolioImplication
+      } : undefined,
       rating: {
         importance,
         read_priority: readPriority,
@@ -1047,6 +1124,10 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         id: sec.id || `sec-${idx}-${Date.now()}`
       })),
       investmentView: {
+        thesis: thesis.trim() || undefined,
+        implications: implications.filter(i => i.trim() !== ""),
+        risks: risks.filter(r => r.trim() !== ""),
+        keyTrackingVariables: keyTrackingVariables.filter(v => v.trim() !== ""),
         mentionedAssets: mentionedAssets.filter(a => a.asset.trim() !== ""),
         bullArguments: bullArguments.filter(b => b.trim() !== ""),
         caveats: caveats.filter(c => c.trim() !== ""),
@@ -1473,7 +1554,17 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               </select>
             </div>
 
-            {/* Source URLs (Multi-input) */}
+            {/* Source Name / Institution */}
+            <div className="col-span-1 md:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-gray-500">🏛️ 출처 / 기관명 (Source Name)</label>
+              <input
+                type="text"
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                placeholder="예: 미래에셋증권, 삼프로TV, 한국은행 등"
+                className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+            </div>
             <div className="col-span-1 md:col-span-2 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
@@ -1926,6 +2017,77 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             ))}
           </div>
         </div>
+        {/* One line conclusion */}
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-gray-500">💬 한 줄 결론 (One-Line Conclusion)</label>
+          <input
+            type="text"
+            value={oneLineConclusion}
+            onChange={(e) => setOneLineConclusion(e.target.value)}
+            placeholder="예: 2Q26 반도체 레거시 감산 종료 후 모멘텀 본격화 전망"
+            className="w-full text-sm p-2.5 border border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-bold bg-amber-50/20"
+          />
+        </div>
+
+        {/* Editor Synthesis Box */}
+        <div className="p-4 bg-indigo-50/30 border border-indigo-200/60 rounded-xl space-y-3">
+          <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider block">✍️ 에디터 종합 판단 (Editor Synthesis)</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-indigo-700">소제목 / 헤드라인</label>
+              <input
+                type="text"
+                value={editorSynthesis.title}
+                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, title: e.target.value })}
+                placeholder="예: 투자 아이디어 종합 판단"
+                className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-indigo-700">포트폴리오 대응 및 함의</label>
+              <input
+                type="text"
+                value={editorSynthesis.portfolioImplication}
+                onChange={(e) => setEditorSynthesis({ ...editorSynthesis, portfolioImplication: e.target.value })}
+                placeholder="예: 비중 확대 보류, 3분기실적 확인 후 대응 권장"
+                className="w-full text-xs p-2 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-indigo-700">종합 요약 및 에디터 총평</label>
+            <textarea
+              value={editorSynthesis.summary}
+              onChange={(e) => setEditorSynthesis({ ...editorSynthesis, summary: e.target.value })}
+              placeholder="원문 핵심 내용과 내 투자관점 간 차이, 핵심 시사점을 자유롭게 기록하세요."
+              rows={3}
+              className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-indigo-700">주요 비교 및 대조 포인트 (줄바꿈 구분)</label>
+            <textarea
+              value={(editorSynthesis.comparisons || []).join("\n")}
+              onChange={(e) => setEditorSynthesis({ ...editorSynthesis, comparisons: e.target.value.split("\n") })}
+              placeholder="줄바꿈으로 기사/리포트 간 비교 포인트를 추가하세요."
+              rows={2}
+              className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Investment Checklist */}
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">☑️ 투자 검증 체크리스트 (Checklist - 줄바꿈 구분)</label>
+          <textarea
+            value={checklist.join("\n")}
+            onChange={(e) => setChecklist(e.target.value.split("\n"))}
+            placeholder="줄바꿈으로 검증이 필요한 항목들을 입력해 주세요."
+            rows={3}
+            className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-slate-500"
+          />
+        </div>
+
         <div className="space-y-5" id="form-sections">
           <div className="flex items-center justify-between border-b border-gray-200 pb-2">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">
@@ -2145,6 +2307,60 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
               <Plus className="w-3.5 h-3.5" />
               <span>종목/섹터 추가</span>
             </button>
+          </div>
+
+          {/* Investment Thesis Input */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+              💡 핵심 투자 가설 (Investment Thesis)
+            </span>
+            <textarea
+              value={thesis}
+              onChange={(e) => setThesis(e.target.value)}
+              placeholder="원문의 핵심 결론 및 정량적/정성적 투자 논리를 요약해 주세요."
+              rows={2}
+              className="w-full text-xs p-3 border border-amber-200 bg-amber-50/10 rounded-lg focus:outline-none focus:border-amber-500 font-medium"
+            />
+          </div>
+
+          {/* Implications, Risks, Key Tracking Variables Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                📈 실적/모멘텀 시사점 (줄바꿈 구분)
+              </span>
+              <textarea
+                value={implications.join("\n")}
+                onChange={(e) => setImplications(e.target.value.split("\n"))}
+                placeholder="줄바꿈으로 구분해 주세요."
+                rows={3}
+                className="w-full text-xs p-2.5 border border-emerald-200 bg-emerald-50/10 rounded-lg focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+                ⚠️ 리스크 요인 (줄바꿈 구분)
+              </span>
+              <textarea
+                value={risks.join("\n")}
+                onChange={(e) => setRisks(e.target.value.split("\n"))}
+                placeholder="줄바꿈으로 구분해 주세요."
+                rows={3}
+                className="w-full text-xs p-2.5 border border-rose-200 bg-rose-50/10 rounded-lg focus:outline-none focus:border-rose-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider block">
+                🎯 주요 추적 변수 (줄바꿈 구분)
+              </span>
+              <textarea
+                value={keyTrackingVariables.join("\n")}
+                onChange={(e) => setKeyTrackingVariables(e.target.value.split("\n"))}
+                placeholder="줄바꿈으로 구분해 주세요."
+                rows={3}
+                className="w-full text-xs p-2.5 border border-indigo-200 bg-indigo-50/10 rounded-lg focus:outline-none focus:border-indigo-500"
+              />
+            </div>
           </div>
 
           {/* Mentioned Assets */}

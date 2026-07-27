@@ -821,6 +821,9 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     let md = `# ${report.title}\n\n`;
     md += `* **날짜:** ${report.date}\n`;
     md += `* **구분:** ${report.category.toUpperCase()}\n`;
+    if (report.sourceName) {
+      md += `* **출처 / 기관:** ${report.sourceName}\n`;
+    }
     if (report.sourceUrls && report.sourceUrls.length > 0) {
       md += `* **출처 목록:**\n`;
       report.sourceUrls.forEach((url, uidx) => {
@@ -831,7 +834,34 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     } else if (report.sourceUrl) {
       md += `* **출처:** [링크](${report.sourceUrl})\n`;
     }
-    md += `\n## 핵심 정리\n\n`;
+
+    if (report.oneLineConclusion) {
+      md += `\n> 💬 **한 줄 결론:** ${report.oneLineConclusion}\n`;
+    }
+
+    md += `\n## 요약 (Summary)\n${report.summary}\n\n`;
+
+    if (report.editorSynthesis) {
+      md += `## ✍️ 에디터 종합 판단\n`;
+      if (report.editorSynthesis.title) md += `### ${report.editorSynthesis.title}\n`;
+      if (report.editorSynthesis.summary) md += `${report.editorSynthesis.summary}\n\n`;
+      if (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) {
+        md += `**주요 비교 및 대조 포인트:**\n`;
+        report.editorSynthesis.comparisons.forEach(cmp => md += `- ${cmp}\n`);
+        md += `\n`;
+      }
+      if (report.editorSynthesis.portfolioImplication) {
+        md += `**포트폴리오 대응:** ${report.editorSynthesis.portfolioImplication}\n\n`;
+      }
+    }
+
+    if (report.checklist && report.checklist.length > 0) {
+      md += `## ☑️ 투자 검증 체크리스트\n`;
+      report.checklist.forEach(item => md += `- [x] ${item}\n`);
+      md += `\n`;
+    }
+
+    md += `## 핵심 정리\n\n`;
     report.keyPoints.forEach((p) => (md += `- ${p}\n`));
     md += `\n---\n\n## 섹션 분석\n\n`;
 
@@ -1133,6 +1163,15 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
               </span>
               <span className="text-[#1A1A1A] font-semibold text-sm">{report.date}</span>
             </div>
+
+            {report.sourceName && (
+              <div className="flex items-start gap-4">
+                <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-0.5">
+                  🏛️ 출처 / 기관
+                </span>
+                <span className="text-[#1A1A1A] font-semibold text-sm">{report.sourceName}</span>
+              </div>
+            )}
 
             <div className="flex items-start gap-4">
               <span className="w-24 text-gray-400 font-bold flex items-center gap-1.5 pt-0.5">
@@ -1464,6 +1503,19 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
           </div>
         </div>
 
+        {/* 한 줄 결론 (One-Line Conclusion) */}
+        {report.oneLineConclusion && (
+          <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-l-4 border-amber-500 p-4.5 rounded-r-xl shadow-2xs">
+            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              💬 한 줄 결론 (Bottom Line)
+            </span>
+            <p className="text-sm md:text-base font-bold text-slate-900 leading-relaxed">
+              {report.oneLineConclusion}
+            </p>
+          </div>
+        )}
+
         {/* 요약 (Summary Box) */}
         <div className="bg-gray-50/50 border border-gray-200 rounded-xl p-6 relative animate-fade-in" id="box-summary">
           <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
@@ -1474,6 +1526,59 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
             <ReactMarkdown>{report.summary}</ReactMarkdown>
           </div>
         </div>
+
+        {/* 에디터 종합 판단 (Editor Synthesis) */}
+        {report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) && (
+          <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-5 space-y-3.5">
+            <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-200/60 pb-2">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              {report.editorSynthesis.title || "에디터 종합 판단 (Editor Synthesis)"}
+            </h3>
+            {report.editorSynthesis.summary && (
+              <p className="text-sm text-slate-800 leading-relaxed font-medium">
+                {report.editorSynthesis.summary}
+              </p>
+            )}
+            {report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
+                  🔍 주요 비교 및 대조 포인트
+                </span>
+                <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm text-slate-700">
+                  {report.editorSynthesis.comparisons.map((cmp, idx) => (
+                    <li key={idx} className="leading-relaxed">{cmp}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {report.editorSynthesis.portfolioImplication && (
+              <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100/80 text-xs md:text-sm text-indigo-950 shadow-2xs">
+                <span className="font-bold text-indigo-800 block mb-1 flex items-center gap-1">
+                  💼 포트폴리오 대응 및 함의
+                </span>
+                <span className="leading-relaxed">{report.editorSynthesis.portfolioImplication}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 투자 검증 체크리스트 (Checklist) */}
+        {report.checklist && report.checklist.length > 0 && (
+          <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 space-y-3">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              투자 검증 체크리스트 (Checklist)
+            </h3>
+            <div className="space-y-2">
+              {report.checklist.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 text-xs md:text-sm text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-emerald-600 font-bold mt-0.5">☑️</span>
+                  <span className="leading-relaxed font-medium">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 핵심 정리 (Key Takeaways) */}
         <div className="space-y-3.5" id="box-keypoints">
@@ -1664,6 +1769,65 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
               투자 관점 (Investment View)
             </h3>
           </div>
+
+          {/* Investment Thesis Block if available */}
+          {report.investmentView.thesis && (
+            <div className="bg-slate-900 text-white p-4.5 rounded-xl space-y-1.5 shadow-xs">
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest block flex items-center gap-1.5">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                핵심 투자 가설 (Investment Thesis)
+              </span>
+              <p className="text-sm md:text-base font-semibold leading-relaxed text-slate-100">
+                {report.investmentView.thesis}
+              </p>
+            </div>
+          )}
+
+          {/* Implications / Risks / Key Tracking Variables Grid if available */}
+          {((report.investmentView.implications && report.investmentView.implications.length > 0) ||
+            (report.investmentView.risks && report.investmentView.risks.length > 0) ||
+            (report.investmentView.keyTrackingVariables && report.investmentView.keyTrackingVariables.length > 0)) && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 my-3">
+              {report.investmentView.implications && report.investmentView.implications.length > 0 && (
+                <div className="bg-emerald-50/50 border border-emerald-200/60 p-4 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
+                    📈 실적 및 모멘텀 시사점
+                  </span>
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-slate-800 font-medium">
+                    {report.investmentView.implications.map((imp, idx) => (
+                      <li key={idx} className="leading-relaxed">{imp}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {report.investmentView.risks && report.investmentView.risks.length > 0 && (
+                <div className="bg-rose-50/50 border border-rose-200/60 p-4 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-rose-800 uppercase tracking-wider block flex items-center gap-1">
+                    ⚠️ 핵심 리스크 요인
+                  </span>
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-slate-800 font-medium">
+                    {report.investmentView.risks.map((r, idx) => (
+                      <li key={idx} className="leading-relaxed">{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {report.investmentView.keyTrackingVariables && report.investmentView.keyTrackingVariables.length > 0 && (
+                <div className="bg-indigo-50/50 border border-indigo-200/60 p-4 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider block flex items-center gap-1">
+                    🎯 주요 추적 지표 / 변수
+                  </span>
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-slate-800 font-medium">
+                    {report.investmentView.keyTrackingVariables.map((v, idx) => (
+                      <li key={idx} className="leading-relaxed">{v}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 언급 종목 및 섹터 */}
           <div className="space-y-2.5">
