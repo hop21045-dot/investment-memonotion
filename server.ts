@@ -135,10 +135,11 @@ Provide your response in JSON format matching this schema:
     "verification_need": 2,
     "notion_save": "저장",
     "recommended_action": "요약만 저장",
+    "action": "구체적인 액션 방안 (예: 원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증)",
     "score_rationale": "평가 이유"
   },
   "status": "요약완료",
-  "action": ""
+  "action": "구체적인 액션 방안"
 }
 
 Ensure to generate detailed sections to capture the full breadth of the raw content. For sections, include comparison tables where appropriate to match the rich visual format of professional Notion pages.`;
@@ -201,6 +202,7 @@ Ensure to generate detailed sections to capture the full breadth of the raw cont
                 verification_need: { type: Type.INTEGER },
                 notion_save: { type: Type.STRING },
                 recommended_action: { type: Type.STRING },
+                action: { type: Type.STRING },
                 score_rationale: { type: Type.STRING }
               }
             },
@@ -364,12 +366,15 @@ Your task is to review the provided structured research memo and output a multi-
 5. "recommended_action" (추천 액션):
 - "요약만 저장" | "원문 정독" | "GPT 검증" | "Wiki 반영 후보" 중 선택해서 그대로 출력해야 합니다.
 
-6. "score_rationale" (평가 근거, 한국어로 작성):
+6. "action" (구체적인 액션 방안):
+- recommended_action 다음에 수행할 구체적인 실행 행동 방안을 1~2문장으로 작성하세요 (예: "원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증").
+
+7. "score_rationale" (평가 근거, 한국어로 작성):
 - 왜 해당 점수들을 부여했는지 2~3문장으로 논리적인 설명을 제시하세요.
 
 Response MUST be a single raw JSON object matching the requested schema. No markdown wrappers.`;
 
-    const prompt = `Please evaluate the following structured memo and provide the 6 rating fields:
+    const prompt = `Please evaluate the following structured memo and provide the rating fields:
 
 TITLE: ${report.title}
 SUMMARY: ${report.summary}
@@ -400,6 +405,7 @@ Neutral Assessment: ${report.investmentView?.neutralEvaluation}`;
             verification_need: { type: Type.INTEGER },
             notion_save: { type: Type.STRING },
             recommended_action: { type: Type.STRING },
+            action: { type: Type.STRING },
             score_rationale: { type: Type.STRING }
           }
         }

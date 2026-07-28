@@ -98,6 +98,7 @@ const EXTERNAL_AI_PROMPT = `당신은 뉴스 기사, 유튜브 자막, 웹페이
     "verification_need": 2,
     "notion_save": "저장 | 보류 | 폐기",
     "recommended_action": "요약만 저장 | 원문 정독 | GPT 검증 | Wiki 반영 후보",
+    "action": "구체적인 액션 방안 (예: 원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증)",
     "score_rationale": ""
   },
   "status": "요약완료",
@@ -181,7 +182,11 @@ content나 details 안에 마크다운 표(|---|---|)를 직접 작성하지 않
 - "GPT 검증"
 - "Wiki 반영 후보"
 
-6. "score_rationale"
+6. "action"
+- recommended_action 다음에 수행할 구체적인 실행 행동 방안을 1~2문장으로 작성합니다.
+- (예: "원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증")
+
+7. "score_rationale"
 - 왜 해당 점수를 부여했는지 2~3문장으로 설명합니다.
 - 특히 4점 이상을 부여할 경우, 왜 원문 정독 또는 검증이 필요한지 구체적으로 설명합니다.
 
@@ -605,6 +610,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setVerificationNeed(report.rating.verification_need || 2);
         setNotionSave(report.rating.notion_save || "보류");
         setRecommendedAction(report.rating.recommended_action || "요약만 저장");
+        if (report.rating.action) setAction(report.rating.action);
         setScoreRationale(report.rating.score_rationale || "");
       } else {
         setReadPriority(3);
@@ -753,6 +759,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setVerificationNeed(Number(data.rating.verification_need) || 2);
         setNotionSave(data.rating.notion_save || "보류");
         setRecommendedAction(data.rating.recommended_action || "요약만 저장");
+        if (data.rating.action) setAction(data.rating.action);
         setScoreRationale(data.rating.score_rationale || "");
         if (data.rating.importance !== undefined) setImportance(Number(data.rating.importance));
       } else {
@@ -966,6 +973,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         setVerificationNeed(Number(data.rating.verification_need) || 2);
         setNotionSave(data.rating.notion_save || "보류");
         setRecommendedAction(data.rating.recommended_action || "요약만 저장");
+        if (data.rating.action) setAction(data.rating.action);
         setScoreRationale(data.rating.score_rationale || "");
         if (data.rating.importance !== undefined) setImportance(Number(data.rating.importance));
       } else {
@@ -1131,6 +1139,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         verification_need: verificationNeed,
         notion_save: notionSave,
         recommended_action: recommendedAction,
+        action: action,
         score_rationale: scoreRationale
       },
       verified,
@@ -1980,6 +1989,21 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Concrete Action Plan (action) block */}
+                <div className="col-span-1 md:col-span-3 space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block flex items-center gap-1.5">
+                    <span>⚡️</span>
+                    <span>구체적인 액션 방안 (Action)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={action || ""}
+                    onChange={(e) => setAction(e.target.value)}
+                    placeholder="예: 원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증"
+                    className="w-full text-xs p-2.5 border border-indigo-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium bg-indigo-50/20 text-slate-900"
+                  />
                 </div>
 
                 {/* Rationale Textarea Block */}

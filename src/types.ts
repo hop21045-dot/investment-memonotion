@@ -58,6 +58,7 @@ export interface Rating {
   verification_need: number;
   notion_save: '저장' | '보류' | '폐기' | string;
   recommended_action: '요약만 저장' | '원문 정독' | 'GPT 검증' | 'Wiki 반영 후보' | string;
+  action?: string;
   score_rationale: string;
 }
 

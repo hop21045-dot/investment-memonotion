@@ -1387,6 +1387,21 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                 </div>
               </div>
 
+              {/* Concrete Action Plan (구체적인 액션 방안) */}
+              {(report.rating?.action || report.action) && (
+                <div className="bg-white border border-indigo-100 p-3.5 rounded-xl text-xs leading-relaxed font-semibold text-slate-800 flex items-start gap-2.5 shadow-2xs">
+                  <span className="text-indigo-600 font-bold flex-shrink-0 text-sm mt-0.5">⚡</span>
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                      구체적인 액션 방안 (Action Plan)
+                    </span>
+                    <p className="text-slate-900 font-bold leading-relaxed">
+                      {report.rating?.action || report.action}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Rationale Text */}
               {report.rating?.score_rationale && (
                 <div className="bg-white border border-slate-100 p-3.5 rounded-xl text-[11px] leading-relaxed font-medium text-slate-600">
