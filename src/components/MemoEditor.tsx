@@ -605,18 +605,30 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
       setNeutralEvaluation(inv.neutralEvaluation || "");
 
+      const getFallbackActionText = (rec?: string) => {
+        if (!rec) return "원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증";
+        if (rec.includes("GPT 검증")) return "원문과 초안을 대조해 핵심 수치 및 밸류에이션 가정을 검증";
+        if (rec.includes("Wiki 반영 후보")) return "핵심 수주 논리와 핵심 추적 변수를 Obsidian / Wiki Source Card로 반영";
+        if (rec.includes("원문 정독")) return "주요 논리 및 리스크 요인 확인을 위해 원문 전체를 정독";
+        if (rec.includes("요약만 저장")) return "검증된 핵심 요약본만 노션/저장소에 저장";
+        return "원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증";
+      };
+
       if (report.rating) {
         setReadPriority(report.rating.read_priority || 3);
         setVerificationNeed(report.rating.verification_need || 2);
         setNotionSave(report.rating.notion_save || "보류");
-        setRecommendedAction(report.rating.recommended_action || "요약만 저장");
-        if (report.rating.action) setAction(report.rating.action);
+        const rec = report.rating.recommended_action || "요약만 저장";
+        setRecommendedAction(rec);
+        setAction(report.rating.action || report.action || getFallbackActionText(rec));
         setScoreRationale(report.rating.score_rationale || "");
       } else {
         setReadPriority(3);
         setVerificationNeed(report.verified === "O" ? 4 : 2);
         setNotionSave((report.importance || 3) >= 4 ? "저장" : "보류");
-        setRecommendedAction(report.action || "요약만 저장");
+        const rec = report.action || "요약만 저장";
+        setRecommendedAction(rec);
+        setAction(report.action || getFallbackActionText(rec));
         setScoreRationale("");
       }
     } else {
