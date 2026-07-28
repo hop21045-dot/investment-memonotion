@@ -527,7 +527,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
   const [summary, setSummary] = useState("");
   const [importance, setImportance] = useState<number>(3); // Default to 3
   const [verified, setVerified] = useState<"O" | "X">("X");
-  const [status, setStatus] = useState<"요약완료" | "정독필요" | "검증중" | "검증완료" | "Wiki반영">("요약완료");
+  const [status, setStatus] = useState<"요약완료" | "검증완료" | "부분검증" | "확인필요">("요약완료");
   const [action, setAction] = useState<StructuredReport["action"]>("");
   const [keyPoints, setKeyPoints] = useState<string[]>(["", "", ""]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -1581,13 +1581,12 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
                 onChange={(e) => setStatus(e.target.value as any)}
                 className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-white font-medium cursor-pointer"
               >
-                {["요약완료", "정독필요", "검증중", "검증완료", "Wiki반영"].map((st) => (
+                {["요약완료", "검증완료", "부분검증", "확인필요"].map((st) => (
                   <option key={st} value={st}>
                     {st === "요약완료" ? "📝 요약완료" :
-                     st === "정독필요" ? "🔍 정독필요" :
-                     st === "검증중" ? "⚙️ 검증중" :
                      st === "검증완료" ? "✅ 검증완료" :
-                     "📚 Wiki반영"}
+                     st === "부분검증" ? "🔍 부분검증" :
+                     "⚠️ 확인필요"}
                   </option>
                 ))}
               </select>

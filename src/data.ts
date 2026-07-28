@@ -98,7 +98,7 @@ export const SAMPLE_REPORTS: StructuredReport[] = [
     sectors: ["반도체", "AI"],
     importance: 4,
     verified: "O",
-    status: "Wiki반영",
+    status: "검증완료",
     action: "Wiki 반영 필요"
   },
   {
@@ -160,7 +160,7 @@ export const SAMPLE_REPORTS: StructuredReport[] = [
     sectors: ["반도체", "AI", "하드웨어"],
     importance: 3,
     verified: "X",
-    status: "정독필요",
+    status: "확인필요",
     action: "원문 정독"
   }
 ];

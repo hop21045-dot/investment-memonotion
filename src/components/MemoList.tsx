@@ -185,9 +185,12 @@ export default function MemoList({
     if (!status) return null;
     const colors: { [key: string]: string } = {
       "요약완료": "bg-blue-50 border-blue-200/50 text-blue-700",
+      "검증완료": "bg-emerald-50 border-emerald-200/50 text-emerald-700",
+      "부분검증": "bg-indigo-50 border-indigo-200/50 text-indigo-700",
+      "확인필요": "bg-amber-50 border-amber-200/50 text-amber-700",
+      // Legacy fallback mapping
       "정독필요": "bg-amber-50 border-amber-200/50 text-amber-700",
       "검증중": "bg-indigo-50 border-indigo-200/50 text-indigo-700",
-      "검증완료": "bg-emerald-50 border-emerald-200/50 text-emerald-700",
       "Wiki반영": "bg-purple-50 border-purple-200/50 text-purple-700",
     };
     const cls = colors[status] || "bg-gray-50 border-gray-200 text-gray-700";
