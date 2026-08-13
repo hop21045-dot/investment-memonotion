@@ -318,7 +318,11 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       `;
     }).join('');
 
-    const mentionedAssetsHtml = report.investmentView.mentionedAssets && report.investmentView.mentionedAssets.length > 0 ? `
+    const validMentionedAssets = (report.investmentView.mentionedAssets || []).filter(
+      asset => asset && asset.asset && !asset.asset.startsWith("예:") && asset.asset.trim() !== ""
+    );
+
+    const mentionedAssetsHtml = validMentionedAssets.length > 0 ? `
       <table>
         <thead>
           <tr>
@@ -328,7 +332,7 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
           </tr>
         </thead>
         <tbody>
-          ${report.investmentView.mentionedAssets.map(asset => `
+          ${validMentionedAssets.map(asset => `
             <tr>
               <td style="font-weight: 700; color: #0f172a;">${asset.asset}</td>
               <td><span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 700; border: 1px solid #e2e8f0;">${asset.relation}</span></td>

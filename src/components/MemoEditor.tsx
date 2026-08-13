@@ -601,7 +601,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setRisks(rList.length > 0 ? rList : cList);
       setCaveats(cList.length > 0 ? cList : rList);
       setKeyTrackingVariables(inv.keyTrackingVariables ? [...inv.keyTrackingVariables] : []);
-      setMentionedAssets(inv.mentionedAssets ? JSON.parse(JSON.stringify(inv.mentionedAssets)) : []);
+      setMentionedAssets(inv.mentionedAssets ? (JSON.parse(JSON.stringify(inv.mentionedAssets)) as MentionedAsset[]).filter(a => a && a.asset && !a.asset.startsWith("예:") && a.asset.trim() !== "") : []);
       setBullArguments(inv.bullArguments ? [...inv.bullArguments] : []);
       setNeutralEvaluation(inv.neutralEvaluation || "");
 
@@ -668,10 +668,10 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
           callout: { type: "warning", text: "체크해야 할 포인트를 적어주세요." }
         }
       ]);
-      setMentionedAssets([{ asset: "예: 삼성전자 (005930)", relation: "수혜 예상", context: "AI 시장 성장에 따른 실적 리레이팅 모멘텀" }]);
-      setBullArguments(["시장 지배력의 점진적 향상", "견조한 레거시 수요"]);
-      setCaveats(["글로벌 금리 고조 리스크"]);
-      setNeutralEvaluation("시장 변동성에 주의하되 성장 섹터에 집중하는 보수적 접근이 필요합니다.");
+      setMentionedAssets([]);
+      setBullArguments([]);
+      setCaveats([]);
+      setNeutralEvaluation("");
 
       setReadPriority(3);
       setVerificationNeed(2);
@@ -867,11 +867,15 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         if (iv.keyTrackingVariables && Array.isArray(iv.keyTrackingVariables)) setKeyTrackingVariables(iv.keyTrackingVariables.map((v: any) => String(v)));
 
         if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
-          setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
-            asset: asset.asset || asset.name || "",
-            relation: asset.relation || "",
-            context: asset.context || ""
-          })));
+          setMentionedAssets(
+            iv.mentionedAssets
+              .map((asset: any) => ({
+                asset: asset.asset || asset.name || "",
+                relation: asset.relation || "",
+                context: asset.context || ""
+              }))
+              .filter((a: MentionedAsset) => a.asset.trim() !== "" && !a.asset.startsWith("예:"))
+          );
         }
         if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
           setBullArguments(iv.bullArguments.map((b: any) => String(b)));
@@ -1083,11 +1087,15 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         if (iv.keyTrackingVariables && Array.isArray(iv.keyTrackingVariables)) setKeyTrackingVariables(iv.keyTrackingVariables.map((v: any) => String(v)));
 
         if (iv.mentionedAssets && Array.isArray(iv.mentionedAssets)) {
-          setMentionedAssets(iv.mentionedAssets.map((asset: any) => ({
-            asset: asset.asset || asset.name || "",
-            relation: asset.relation || "",
-            context: asset.context || ""
-          })));
+          setMentionedAssets(
+            iv.mentionedAssets
+              .map((asset: any) => ({
+                asset: asset.asset || asset.name || "",
+                relation: asset.relation || "",
+                context: asset.context || ""
+              }))
+              .filter((a: MentionedAsset) => a.asset.trim() !== "" && !a.asset.startsWith("예:"))
+          );
         }
         if (iv.bullArguments && Array.isArray(iv.bullArguments)) {
           setBullArguments(iv.bullArguments.map((b: any) => String(b)));
@@ -1167,7 +1175,7 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
         implications: implications.filter(i => i.trim() !== ""),
         risks: risks.filter(r => r.trim() !== ""),
         keyTrackingVariables: keyTrackingVariables.filter(v => v.trim() !== ""),
-        mentionedAssets: mentionedAssets.filter(a => a.asset.trim() !== ""),
+        mentionedAssets: mentionedAssets.filter(a => a.asset.trim() !== "" && !a.asset.startsWith("예:")),
         bullArguments: bullArguments.filter(b => b.trim() !== ""),
         caveats: caveats.filter(c => c.trim() !== ""),
         neutralEvaluation
