@@ -304,13 +304,29 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
         </div>
       ` : '';
 
+      const hasStructuredFields = sec.summary || (sec.details && sec.details.length > 0);
+      let contentHtml = '';
+
+      if (hasStructuredFields) {
+        if (sec.summary) {
+          contentHtml += `<p style="font-weight: 600; color: #0f172a; margin-bottom: 12px; font-size: 1.05em; line-height: 1.6;">${parseMarkdownToHtml(sec.summary)}</p>`;
+        }
+        if (sec.details && sec.details.length > 0) {
+          contentHtml += `<ul style="list-style-type: disc; padding-left: 20px; line-height: 1.8; color: #334155; margin-bottom: 12px;">
+            ${sec.details.map(d => `<li>${parseMarkdownToHtml(d)}</li>`).join('')}
+          </ul>`;
+        }
+      } else if (sec.content) {
+        contentHtml = `<div>${parseMarkdownToHtml(sec.content)}</div>`;
+      }
+
       return `
         <div class="section-block">
           <h3 style="margin-top: 0; color: #0f172a; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; page-break-after: avoid; break-after: avoid;">
             <span>SEC ${sIdx + 1}. ${sec.title}</span>
             ${sec.source ? `<span style="font-size: 0.75em; font-weight: normal; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px;">출처: ${sec.source}</span>` : ''}
           </h3>
-          <div>${parseMarkdownToHtml(sec.content)}</div>
+          ${contentHtml}
           ${quoteHtml}
           ${tableHtml}
           ${calloutHtml}
@@ -318,33 +334,75 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       `;
     }).join('');
 
-    const validMentionedAssets = (report.investmentView.mentionedAssets || []).filter(
-      asset => asset && asset.asset && !asset.asset.startsWith("예:") && asset.asset.trim() !== ""
-    );
+    const thesisHtml = report.investmentView.thesis ? `
+      <div style="background-color: #0f172a; color: #ffffff; padding: 18px 20px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="font-size: 0.8em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #fbbf24; margin-bottom: 6px;">💡 핵심 투자 가설 (Thesis)</div>
+        <div style="font-size: 1.05em; font-weight: 600; line-height: 1.6;">${parseMarkdownToHtml(report.investmentView.thesis)}</div>
+      </div>
+    ` : '';
 
-    const mentionedAssetsHtml = validMentionedAssets.length > 0 ? `
-      <table>
-        <thead>
-          <tr>
-            <th>종목·섹터</th>
-            <th>관계</th>
-            <th>맥락 (Context)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${validMentionedAssets.map(asset => `
-            <tr>
-              <td style="font-weight: 700; color: #0f172a;">${asset.asset}</td>
-              <td><span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 700; border: 1px solid #e2e8f0;">${asset.relation}</span></td>
-              <td>${asset.context}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    ` : '<p style="color: #64748b; font-size: 0.9em; font-style: italic;">분석된 관련 종목이 없습니다.</p>';
+    const implicationsHtml = report.investmentView.implications && report.investmentView.implications.length > 0 ? `
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+        <h4 style="color: #166534; margin: 0 0 8px 0; font-size: 0.9em; font-weight: 800;">📈 실적 및 모멘텀 시사점</h4>
+        <ul style="padding-left: 20px; margin: 0; line-height: 1.8; color: #166534; font-weight: 500;">
+          ${report.investmentView.implications.map(imp => `<li>${imp}</li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
 
-    const bullArgumentsHtml = report.investmentView.bullArguments.map(arg => `<li style="margin-bottom: 6px; color: #166534; font-weight: 550;">${arg}</li>`).join('');
-    const caveatsHtml = report.investmentView.caveats.map(arg => `<li style="margin-bottom: 6px; color: #991b1b; font-weight: 550;">${arg}</li>`).join('');
+    const risksHtml = report.investmentView.risks && report.investmentView.risks.length > 0 ? `
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+        <h4 style="color: #991b1b; margin: 0 0 8px 0; font-size: 0.9em; font-weight: 800;">⚠️ 핵심 리스크 요인</h4>
+        <ul style="padding-left: 20px; margin: 0; line-height: 1.8; color: #991b1b; font-weight: 500;">
+          ${report.investmentView.risks.map(r => `<li>${r}</li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
+
+    const keyVariablesHtml = report.investmentView.keyTrackingVariables && report.investmentView.keyTrackingVariables.length > 0 ? `
+      <div style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+        <h4 style="color: #3730a3; margin: 0 0 8px 0; font-size: 0.9em; font-weight: 800;">🎯 주요 추적 변수</h4>
+        <ul style="padding-left: 20px; margin: 0; line-height: 1.8; color: #3730a3; font-weight: 500;">
+          ${report.investmentView.keyTrackingVariables.map(v => `<li>${v}</li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
+
+    const oneLineConclusionHtml = report.oneLineConclusion ? `
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 12px 12px 0; margin-top: 32px; margin-bottom: 24px;">
+        <div style="font-size: 0.8em; font-weight: 800; text-transform: uppercase; color: #92400e; margin-bottom: 4px;">💬 한 줄 결론 (Bottom Line)</div>
+        <div style="font-size: 1.1em; font-weight: 700; color: #78350f; line-height: 1.5;">${report.oneLineConclusion}</div>
+      </div>
+    ` : '';
+
+    const checklistHtml = report.checklist && report.checklist.length > 0 ? `
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 24px;">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 0.95em; font-weight: 800; color: #0f172a;">☑️ 투자 검증 체크리스트</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin: 0; line-height: 1.8;">
+          ${report.checklist.map(item => `<li style="margin-bottom: 6px; display: flex; align-items: flex-start; gap: 8px;"><span style="color: #10b981; font-weight: bold;">☑️</span> <span>${item}</span></li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
+
+    const editorSynthesisHtml = report.editorSynthesis && (report.editorSynthesis.title || report.editorSynthesis.summary || (report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0) || report.editorSynthesis.portfolioImplication) ? `
+      <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 20px; margin-top: 24px;">
+        <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 0.95em; font-weight: 800; color: #4c1d95;">✍️ ${report.editorSynthesis.title || "에디터 종합 판단"}</h3>
+        ${report.editorSynthesis.summary ? `<p style="margin-top: 0; margin-bottom: 12px; color: #334155; line-height: 1.6;">${parseMarkdownToHtml(report.editorSynthesis.summary)}</p>` : ''}
+        ${report.editorSynthesis.comparisons && report.editorSynthesis.comparisons.length > 0 ? `
+          <div style="margin-top: 10px; margin-bottom: 10px;">
+            <strong style="color: #5b21b6; font-size: 0.85em;">🔍 주요 비교 포인트:</strong>
+            <ul style="padding-left: 20px; margin-top: 4px; margin-bottom: 8px; color: #475569;">
+              ${report.editorSynthesis.comparisons.map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+        ${report.editorSynthesis.portfolioImplication ? `
+          <div style="background-color: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #ede9fe; color: #3730a3; font-weight: 600; font-size: 0.9em;">
+            💼 포트폴리오 대응: ${report.editorSynthesis.portfolioImplication}
+          </div>
+        ` : ''}
+      </div>
+    ` : '';
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="ko">
@@ -700,30 +758,14 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
     ${sectionsHtml}
     
     <h2 style="margin-top: 48px;">📊 투자 관점 (Investment View)</h2>
+    ${thesisHtml}
+    ${implicationsHtml}
+    ${risksHtml}
+    ${keyVariablesHtml}
     
-    <h3 style="margin-top: 24px;">🔎 언급 종목 및 섹터</h3>
-    ${mentionedAssetsHtml}
-    
-    <div class="investment-dual-grid">
-      <div class="investment-box bull-box">
-        <h4 class="investment-box-title" style="color: #166534;">🟢 강세 논거 (Bull Thesis)</h4>
-        <ul style="padding-left: 20px; margin: 0; line-height: 1.8;">
-          ${bullArgumentsHtml}
-        </ul>
-      </div>
-      
-      <div class="investment-box bear-box">
-        <h4 class="investment-box-title" style="color: #991b1b;">🔴 주의 및 반론 (Bear Risks)</h4>
-        <ul style="padding-left: 20px; margin: 0; line-height: 1.8;">
-          ${caveatsHtml}
-        </ul>
-      </div>
-    </div>
-    
-    <h3 style="margin-top: 28px;">⚖️ 중립적 종합 평가</h3>
-    <div style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; font-weight: 500;">
-      ${parseMarkdownToHtml(report.investmentView.neutralEvaluation)}
-    </div>
+    ${oneLineConclusionHtml}
+    ${checklistHtml}
+    ${editorSynthesisHtml}
     
     <div style="margin-top: 56px; border-top: 1px solid #e2e8f0; padding-top: 24px; text-align: center;">
       <p style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">

@@ -38,111 +38,47 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "정리할 내용을 입력해 주세요." });
     }
 
-    const systemInstruction = `You are a world-class financial and technology research analyst. 
-Your task is to analyze the provided raw content (which could be a YouTube transcript, a report, or a Telegram post) and synthesize it into a highly professional, beautifully structured Korean research memo.
-Format your response STRICTLY as a single JSON object matching the requested schema. Do not output any markdown wrapper like \`\`\`json, just pure raw JSON.
-All text must be in professional formal Korean (e.g., '수급적 원인으로 해석됩니다', '전망이 우세합니다'). Avoid informal speech. Ensure the insights are deeply analytical, informative, and structurally rich, capturing critical numbers, arguments, and quotes.
+    const systemInstruction = `당신은 뉴스 기사, 유튜브 자막, 웹페이지, 증권사 리포트, 텔레그램 글, IR 자료, 컨퍼런스콜 등 다양한 투자 콘텐츠를 분석하여 간결하고 구조적인 '노션 스타일 투자 리서치 메모'를 만드는 투자 리서치 에디터입니다.
 
-CRITICAL DESIGN INSTRUCTION FOR TABLES:
-If the raw content contains competitor comparisons, valuation metrics (such as PER, PBR, EV/EBITDA, EPS, BPS, target prices) of one or more companies, or financial/market-share data over time, you MUST structure this data as a clear, comprehensive comparison table inside the relevant section(s) using the 'table' schema field. Do NOT write markdown tables (|---|---|) inside the 'content' field of a section. The 'content' field must contain only plain explanatory text with simple markdown. All tabular, comparative, or numerical matrix data MUST be put into the separate 'table' schema field.
+[1. 기본 원칙]
+1. 모든 텍스트는 한국어로 작성합니다. 고유명사·제품명·기술명은 필요한 경우 원문 표현을 유지합니다.
+2. 원문에 없는 사실·숫자·날짜·기업명·계약·고객사·실적 전망을 만들지 않습니다.
+3. 원문에서 직접 도출되는 1차 투자자 해석은 허용하되 원문 사실과 구분합니다.
+4. 불확실한 내용은 '추정' 또는 '확인 필요'로 표시합니다.
+5. 가능성·계획·전망을 확정된 계약·수주·실적·수혜처럼 표현하지 않습니다.
+6. 근거 없는 '독점 수혜', '유일한 수혜주', '구조적 성장 확정', '실적 급증 확정', '압도적 경쟁우위', '수주 확정' 등의 표현을 사용하지 않습니다.
+7. 원문 근거가 부족한 필드는 빈 배열 [] 또는 빈 문자열 ""로 둡니다.
+8. 투자 판단에 필요한 핵심 수치·표·기업 전략·제품·기술 차이·수급·가격·실적·수주·Capex·밸류에이션·리스크는 보존합니다.
 
-CRITICAL INSTRUCTION FOR IMPORTANCE RATING:
-Assess the source or news and assign an importance score from 1 to 5 based on these specific rules:
-- 5: [투자판단에 직접 영향] 원문 정독 + 검증 (예: 보유종목 직접 관련, 기존 투자 논리 변동 가능, 새로운 산업 프레임 제공, 중요한 숫자/수주/Capex/실적)
-- 4: [섹터/기업 Wiki 반영 후보] 핵심 부분 정독 (예: 리포트 반영 가능, 섹터 방향성 영향)
-- 3: [참고자료] 요약만 저장 (예: 참고용 뉴스 및 데이터)
-- 2: [흥미는 있으나 낮은 우선순위] 링크만 보관 (예: 낮은 우선순위)
-- 1: [저장 가치 낮음] 폐기 가능 (예: 중복 자료, 가십성 정보)`;
+[2. 최소 충분성 원칙]
+- "이 항목을 삭제하면 핵심 투자 논리 또는 중요한 근거를 이해하기 어려워지는가?" 질문하여 그렇지 않다면 삭제 또는 통합합니다.
+- summary는 자료 전체의 결론과 방향을 담당하며, 개별 논점의 핵심 인사이트는 각 section.summary에서 작성합니다.
+- keyPoints는 반드시 기억할 원문 사실과 핵심 수치(실적, 수주, 가격, Capex, 고객 변화 등)만 선별합니다.
 
-    const prompt = `Analyze and summarize the following raw text content.
-If a category is selected ("${category || 'any'}"), prioritize structuring it appropriately.
+[3. sections 작성 원칙]
+- 각 section은 '핵심 쟁점·주장 → 이를 뒷받침하는 사실·수치 → 필요한 비교·반론·인과관계 → 해당 논점의 핵심 인사이트' 흐름으로 구성합니다.
+- title: 무엇에 대한 논점인지 직관적인 제목 (예: "01 | 핵심 쟁점")
+- summary: 단순 내용 요약이 아니라 해당 section에서 반드시 기억해야 할 핵심 주장·쟁점·인사이트를 1~2문장으로 작성
+- details: summary를 뒷받침하는 최소한의 사실·수치·비교·반론·인과관계를 문자열 배열로 정리
+- table: 비교 자체가 투자 판단에 의미를 추가할 때만 사용 ({ headers: [], rows: [] })
+- source: 원문 페이지 또는 위치
 
-RAW CONTENT:
+[4. investmentView & 종합 판단]
+- investmentView는 sections를 다시 요약하지 않고 자료 전체의 상위 수준 투자적 의미를 종합합니다 (thesis, implications, risks, keyTrackingVariables).
+- editorSynthesis는 단일 자료에서는 비워두고({ title: "", summary: "", comparisons: [], portfolioImplication: "" }), 복수 자료 종합 시에만 작성합니다.
+- checklist: 향후 실제로 확인할 행동을 배열로 작성합니다.
+- oneLineConclusion: 자료 전체의 최종 투자적 의미를 한 문장으로 압축합니다.
+- rating: importance(1~5 매우 보수적), read_priority(1~5), verification_need(1~5), notion_save("저장"|"보류"|"폐기"), recommended_action("요약만 저장"|"원문 정독"|"GPT 검증"|"Wiki 반영 후보"), score_rationale
+- status: 초안은 항상 "요약완료"
+- action: recommended_action에 따른 구체적 실행 방안을 1문장으로 작성`;
+
+    const prompt = `입력된 원문을 심층 분석하여 공식 JSON 스키마에 맞는 노션 요약본 초안을 작성하세요.
+${category ? `카테고리: ${category}` : ''}
+
+[원문 내용]
 ${text}
 
-Provide your response in JSON format matching this schema:
-{
-  "title": "A beautiful descriptive title in Korean, prefixed with an appropriate emoji, followed by '(☆: 출처명)' where '☆' is the name of the source (e.g. '🎥 [반도체] Citi 글로벌 반도체 전망 (☆: Citi)')",
-  "category": "youtube | telegram | report | webpage",
-  "sectors": ["Sector 1", "Sector 2"],
-  "sourceUrl": "The URL of the source if mentioned, or empty string",
-  "date": "YYYY-MM-DD format",
-  "sourceName": "The name of the source/brokerage/channel (e.g., 'Citi', '신한투자증권')",
-  "summary": "An elegant 2-3 sentence overview summarizing the core event or findings",
-  "keyPoints": [
-    "Key Takeaway 1",
-    "Key Takeaway 2"
-  ],
-  "oneLineConclusion": "A high-impact 1-sentence bottom-line investment thesis",
-  "checklist": [
-    "Checklist item / verification condition 1",
-    "Checklist item / verification condition 2"
-  ],
-  "editorSynthesis": {
-    "title": "종합 판단 / 에디터 총평 제목",
-    "summary": "에디터 종합 요약 문단",
-    "comparisons": ["비교/대조포인트 1", "비교/대조포인트 2"],
-    "portfolioImplication": "포트폴리오 대응 전략 및 함의"
-  },
-  "sections": [
-    {
-      "title": "01 | [주제] 섹터 분석 대제목",
-      "summary": "Core summary of this section in 2-3 sentences",
-      "details": [
-        "Detail point 1",
-        "Detail point 2"
-      ],
-      "table": {
-        "headers": ["Header 1", "Header 2"],
-        "rows": [
-          ["Row 1 Col 1", "Row 1 Col 2"]
-        ]
-      },
-      "source": "출처/페이지"
-    }
-  ],
-  "investmentView": {
-    "thesis": "핵심 투자 가설 및 주 논지",
-    "implications": [
-      "실적/수급/상승요인 함의 1",
-      "실적/수급/상승요인 함의 2"
-    ],
-    "risks": [
-      "핵심 리스크 요인 1",
-      "핵심 리스크 요인 2"
-    ],
-    "keyTrackingVariables": [
-      "앞으로 추적해야 할 주요 지표/이벤트 1"
-    ],
-    "mentionedAssets": [
-      {
-        "asset": "Company or asset name (e.g., 삼성전자 (005930))",
-        "relation": "Brief relationship context (e.g., 긍정적 영향, 단기 조정 등)",
-        "context": "Analytical context describing the catalyst and potential impact"
-      }
-    ],
-    "bullArguments": [
-      "Bullish catalyst 1"
-    ],
-    "caveats": [
-      "Bearish risk 1"
-    ],
-    "neutralEvaluation": "A balanced, neutral macro or industry evaluation summary paragraph"
-  },
-  "rating": {
-    "importance": 4,
-    "read_priority": 3,
-    "verification_need": 2,
-    "notion_save": "저장",
-    "recommended_action": "요약만 저장",
-    "action": "구체적인 액션 방안 (예: 원문과 초안을 대조해 증설 계획·수주 규모·실적 전망과 밸류에이션 가정을 검증)",
-    "score_rationale": "평가 이유"
-  },
-  "status": "요약완료",
-  "action": "구체적인 액션 방안"
-}
-
-Ensure to generate detailed sections to capture the full breadth of the raw content. For sections, include comparison tables where appropriate to match the rich visual format of professional Notion pages.`;
+다음 구조의 순수 JSON으로만 응답하세요.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -210,35 +146,16 @@ Ensure to generate detailed sections to capture the full breadth of the raw cont
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
-                required: ["title"],
+                required: ["title", "summary"],
                 properties: {
                   title: { type: Type.STRING },
-                  content: { type: Type.STRING },
                   summary: { type: Type.STRING },
-                  source: { type: Type.STRING },
                   details: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING }
                   },
-                  bullArguments: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  riskFactors: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  keyVariables: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  quote: {
-                    type: Type.OBJECT,
-                    properties: {
-                      text: { type: Type.STRING },
-                      author: { type: Type.STRING }
-                    }
-                  },
+                  content: { type: Type.STRING },
+                  source: { type: Type.STRING },
                   table: {
                     type: Type.OBJECT,
                     properties: {
@@ -253,13 +170,6 @@ Ensure to generate detailed sections to capture the full breadth of the raw cont
                           items: { type: Type.STRING }
                         }
                       }
-                    }
-                  },
-                  callout: {
-                    type: Type.OBJECT,
-                    properties: {
-                      type: { type: Type.STRING },
-                      text: { type: Type.STRING }
                     }
                   }
                 }
@@ -280,27 +190,7 @@ Ensure to generate detailed sections to capture the full breadth of the raw cont
                 keyTrackingVariables: {
                   type: Type.ARRAY,
                   items: { type: Type.STRING }
-                },
-                mentionedAssets: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      asset: { type: Type.STRING },
-                      relation: { type: Type.STRING },
-                      context: { type: Type.STRING }
-                    }
-                  }
-                },
-                bullArguments: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING }
-                },
-                caveats: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING }
-                },
-                neutralEvaluation: { type: Type.STRING }
+                }
               }
             }
           }
