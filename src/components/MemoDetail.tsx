@@ -309,12 +309,26 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
 
       if (hasStructuredFields) {
         if (sec.summary) {
-          contentHtml += `<p style="font-weight: 600; color: #0f172a; margin-bottom: 12px; font-size: 1.05em; line-height: 1.6;">${parseMarkdownToHtml(sec.summary)}</p>`;
+          contentHtml += `
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px;">
+              <div style="font-size: 0.75em; font-weight: 800; color: #4338ca; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                <span>📌</span> 섹션 핵심 요약 (Summary)
+              </div>
+              <p style="font-weight: 600; color: #0f172a; margin: 0; font-size: 1em; line-height: 1.6;">${parseMarkdownToHtml(sec.summary)}</p>
+            </div>
+          `;
         }
         if (sec.details && sec.details.length > 0) {
-          contentHtml += `<ul style="list-style-type: disc; padding-left: 20px; line-height: 1.8; color: #334155; margin-bottom: 12px;">
-            ${sec.details.map(d => `<li>${parseMarkdownToHtml(d)}</li>`).join('')}
-          </ul>`;
+          contentHtml += `
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 0.75em; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                <span>📋</span> 세부 사실 및 근거
+              </div>
+              <ul style="list-style-type: disc; padding-left: 20px; line-height: 1.8; color: #334155; margin-top: 6px; margin-bottom: 0;">
+                ${sec.details.map(d => `<li>${parseMarkdownToHtml(d)}</li>`).join('')}
+              </ul>
+            </div>
+          `;
         }
       } else if (sec.content) {
         contentHtml = `<div>${parseMarkdownToHtml(sec.content)}</div>`;
@@ -894,9 +908,10 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
       
       if (hasStructuredFields) {
         if (sec.summary) {
-          md += `${sec.summary}\n\n`;
+          md += `**📌 섹션 핵심 요약**\n${sec.summary}\n\n`;
         }
         if (sec.details && sec.details.length > 0) {
+          md += `**📋 세부 사실 및 근거**\n`;
           sec.details.forEach(d => {
             md += `- ${d}\n`;
           });
@@ -1622,15 +1637,31 @@ export default function MemoDetail({ report, onEdit, onDelete, onSelectSector, o
                   {(sec.summary || (sec.details && sec.details.length > 0)) ? (
                     <div className="space-y-4">
                       {sec.summary && (
-                        <p className="text-sm font-semibold text-gray-900 leading-relaxed">{sec.summary}</p>
+                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 space-y-1.5 shadow-2xs">
+                          <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider">
+                            <span>📌</span>
+                            <span>섹션 핵심 요약</span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-900 leading-relaxed pt-0.5">
+                            {sec.summary}
+                          </p>
+                        </div>
                       )}
                       
                       {sec.details && sec.details.length > 0 && (
-                        <ul className="list-disc pl-5 space-y-1">
-                          {sec.details.map((detail, dIdx) => (
-                            <li key={dIdx} className="text-gray-800 leading-relaxed">{detail}</li>
-                          ))}
-                        </ul>
+                        <div className="space-y-2 pt-1">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            <span>📋</span>
+                            <span>세부 사실 및 근거</span>
+                          </div>
+                          <ul className="list-disc pl-5 space-y-1.5">
+                            {sec.details.map((detail, dIdx) => (
+                              <li key={dIdx} className="text-sm text-slate-800 leading-relaxed">
+                                {detail}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </div>
                   ) : (
