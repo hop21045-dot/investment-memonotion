@@ -657,7 +657,26 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       setStatus((report.status as any) || "요약완료");
       setAction(report.action !== undefined ? report.action : "");
       setKeyPoints(report.keyPoints.length > 0 ? [...report.keyPoints] : ["", "", ""]);
-      setSections(report.sections ? JSON.parse(JSON.stringify(report.sections)) : []);
+      if (report.sections) {
+        const loadedSections = JSON.parse(JSON.stringify(report.sections)).map((sec: Section) => {
+          let content = sec.content || "";
+          if (content && (sec.summary || (sec.details && sec.details.length > 0))) {
+            const trimmed = content.trim();
+            const summaryPart = (sec.summary || "").trim();
+            const detailsList = (sec.details || []).map(d => `- ${d}`).join('\n').trim();
+            const plainDetailsList = (sec.details || []).map(d => `${d}`).join('\n').trim();
+            const stitched1 = [summaryPart, detailsList].filter(Boolean).join('\n\n').trim();
+            const stitched2 = [summaryPart, plainDetailsList].filter(Boolean).join('\n\n').trim();
+            if (trimmed === stitched1 || trimmed === stitched2 || trimmed === summaryPart) {
+              content = "";
+            }
+          }
+          return { ...sec, content };
+        });
+        setSections(loadedSections);
+      } else {
+        setSections([]);
+      }
       setOneLineConclusion(report.oneLineConclusion || "");
       setChecklist(report.checklist ? [...report.checklist] : []);
       setEditorSynthesis(report.editorSynthesis ? JSON.parse(JSON.stringify(report.editorSynthesis)) : {
@@ -859,14 +878,10 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
-          if (!sectionContent || sec.summary || (sec.details && sec.details.length > 0)) {
+          // Do not duplicate summary/details into content.
+          // Only generate fallback text if neither summary nor details exist.
+          if (!sectionContent && !sec.summary && (!sec.details || sec.details.length === 0)) {
             const parts: string[] = [];
-            if (sec.summary) {
-              parts.push(sec.summary);
-            }
-            if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
-              parts.push(sec.details.map((d: any) => `- ${d}`).join('\n'));
-            }
             if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
               parts.push(`> ✅ 강세 논거\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
             }
@@ -878,6 +893,16 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             }
             if (parts.length > 0) {
               sectionContent = parts.join('\n\n');
+            }
+          } else if (sectionContent && (sec.summary || (sec.details && sec.details.length > 0))) {
+            const trimmed = sectionContent.trim();
+            const summaryPart = (sec.summary || "").trim();
+            const detailsList = (Array.isArray(sec.details) ? sec.details : []).map((d: any) => `- ${d}`).join('\n').trim();
+            const plainDetailsList = (Array.isArray(sec.details) ? sec.details : []).map((d: any) => `${d}`).join('\n').trim();
+            const stitched1 = [summaryPart, detailsList].filter(Boolean).join('\n\n').trim();
+            const stitched2 = [summaryPart, plainDetailsList].filter(Boolean).join('\n\n').trim();
+            if (trimmed === stitched1 || trimmed === stitched2 || trimmed === summaryPart) {
+              sectionContent = "";
             }
           }
 
@@ -1080,14 +1105,10 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
       if (data.sections && Array.isArray(data.sections)) {
         const parsedSections = data.sections.map((sec: any, idx: number) => {
           let sectionContent = sec.content || "";
-          if (!sectionContent || sec.summary || (sec.details && sec.details.length > 0)) {
+          // Do not duplicate summary/details into content.
+          // Only generate fallback text if neither summary nor details exist.
+          if (!sectionContent && !sec.summary && (!sec.details || sec.details.length === 0)) {
             const parts: string[] = [];
-            if (sec.summary) {
-              parts.push(sec.summary);
-            }
-            if (sec.details && Array.isArray(sec.details) && sec.details.length > 0) {
-              parts.push(sec.details.map((d: any) => `- ${d}`).join('\n'));
-            }
             if (sec.bullArguments && Array.isArray(sec.bullArguments) && sec.bullArguments.length > 0) {
               parts.push(`> ✅ 강세 논거\n${sec.bullArguments.map((b: any) => `- ${b}`).join('\n')}`);
             }
@@ -1099,6 +1120,16 @@ export default function MemoEditor({ report, onSave, onCancel }: MemoEditorProps
             }
             if (parts.length > 0) {
               sectionContent = parts.join('\n\n');
+            }
+          } else if (sectionContent && (sec.summary || (sec.details && sec.details.length > 0))) {
+            const trimmed = sectionContent.trim();
+            const summaryPart = (sec.summary || "").trim();
+            const detailsList = (Array.isArray(sec.details) ? sec.details : []).map((d: any) => `- ${d}`).join('\n').trim();
+            const plainDetailsList = (Array.isArray(sec.details) ? sec.details : []).map((d: any) => `${d}`).join('\n').trim();
+            const stitched1 = [summaryPart, detailsList].filter(Boolean).join('\n\n').trim();
+            const stitched2 = [summaryPart, plainDetailsList].filter(Boolean).join('\n\n').trim();
+            if (trimmed === stitched1 || trimmed === stitched2 || trimmed === summaryPart) {
+              sectionContent = "";
             }
           }
 
